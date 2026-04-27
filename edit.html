@@ -1,0 +1,804 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流浪动物信息编辑 - 绝育与疫苗接种管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=b65c8e6938b1d3ea53347675ee94e09c"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0e27;
+            color: #fff;
+            font-family: "Microsoft YaHei", sans-serif;
+            padding: 20px;
+            position: relative;
+        }
+
+            body::before {
+                content: "";
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-image: url('adb.png');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+                opacity: 0.3;
+                z-index: -1;
+                pointer-events: none;
+            }
+
+        .card {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(0,168,255,0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(3px);
+        }
+
+        .card-title {
+            color: #00a8ff;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .badge-success {
+            background: rgba(0,200,83,0.2);
+            color: #00c853;
+            border: 1px solid rgba(0,200,83,0.3);
+        }
+
+        .badge-warning {
+            background: rgba(255,193,7,0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255,193,7,0.3);
+        }
+
+        .badge-danger {
+            background: rgba(255,82,82,0.2);
+            color: #ff5252;
+            border: 1px solid rgba(255,82,82,0.3);
+        }
+
+        .badge-info {
+            background: rgba(0,168,255,0.2);
+            color: #00a8ff;
+            border: 1px solid rgba(0,168,255,0.3);
+        }
+
+        .badge-purple {
+            background: rgba(156,39,176,0.2);
+            color: #ce93d8;
+            border: 1px solid rgba(156,39,176,0.3);
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .date-cell {
+            border: 1px solid rgba(0,168,255,0.3);
+            border-radius: 6px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+        }
+
+            .date-cell.full {
+                border-color: rgba(255,82,82,0.5);
+                background: rgba(255,82,82,0.1);
+            }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #00a8ff;
+            color: #fff;
+        }
+
+            .btn-primary:hover {
+                background: #0088dd;
+            }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #ccc;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-ahp {
+            background: linear-gradient(135deg, #9c27b0, #673ab7);
+            color: #fff;
+            border: none;
+        }
+
+            .btn-ahp:hover {
+                background: linear-gradient(135deg, #7b1fa2, #512da8);
+            }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .modal-content {
+            background: #0a0e27;
+            border: 1px solid #00a8ff;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            padding: 20px;
+        }
+
+        .modal-large {
+            width: 700px;
+            max-width: 95%;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 5px;
+                color: #00a8ff;
+                font-size: 14px;
+            }
+
+            .form-group input, .form-group select {
+                width: 100%;
+                padding: 8px 10px;
+                background: rgba(0,0,0,0.5);
+                border: 1px solid #00a8ff;
+                border-radius: 4px;
+                color: #fff;
+            }
+
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00a8ff, transparent);
+            margin: 20px 0;
+        }
+
+        .ahp-result-item {
+            background: rgba(0,0,0,0.4);
+            border-left: 3px solid #9c27b0;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+
+            .ahp-result-item:hover {
+                background: rgba(156,39,176,0.1);
+                transform: translateX(5px);
+            }
+
+        .ahp-rank {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: #9c27b0;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: bold;
+            margin-right: 12px;
+        }
+
+        .ahp-score-bar {
+            height: 6px;
+            background: rgba(156,39,176,0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .ahp-score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #9c27b0, #ce93d8);
+            border-radius: 3px;
+            width: 0%;
+        }
+
+        .weight-slider {
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        .weight-value {
+            font-size: 12px;
+            color: #ce93d8;
+        }
+    </style>
+</head>
+<body>
+    <div class="max-w-7xl mx-auto">
+        <div class="mb-4 flex gap-2 flex-wrap">
+            <button onclick="window.close()" class="bg-[#00a8ff] hover:bg-[#0088dd] text-white py-2 px-4 rounded"><i class="fa fa-arrow-left mr-1"></i>返回大屏页面</button>
+            <button id="add-animal-btn" class="bg-[#ba68c8] hover:bg-[#9c27b0] text-white py-2 px-4 rounded"><i class="fa fa-plus mr-1"></i>新增动物</button>
+        </div>
+
+        <!-- 动物信息修改表 -->
+        <div class="card">
+            <div class="card-title"><i class="fa fa-pencil"></i>动物信息修改</div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-[rgba(0,168,255,0.3)]">
+                            <th class="py-3 px-4 text-left">编号</th>
+                            <th class="py-3 px-4 text-left">名称</th>
+                            <th class="py-3 px-4 text-left">修改名称</th>
+                            <th class="py-3 px-4 text-left">类型</th>
+                            <th class="py-3 px-4 text-left">存活状态</th>
+                            <th class="py-3 px-4 text-left">疫苗接种</th>
+                            <th class="py-3 px-4 text-left">上次接种日期</th>
+                            <th class="py-3 px-4 text-left">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="edit-table-body" class="text-[#ccc]"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="card">
+                <div class="card-title"><i class="fa fa-stethoscope"></i>绝育预约分配（每日最多3只）</div>
+                <div id="unneutered-list" class="mb-4 max-h-[200px] overflow-y-auto scrollbar-hide bg-black/20 rounded p-2"><div class="text-sm text-[#aaa] mb-2"><i class="fa fa-info-circle mr-1"></i>点击下方未绝育动物进行预约</div></div>
+                <div id="neuter-date-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3"></div>
+                <div class="text-sm text-[#aaa] mt-3"><i class="fa fa-info-circle mr-1"></i>操作说明：点击未绝育动物进行预约，点击已分配动物可取消预约</div>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fa fa-medkit"></i>疫苗接种预约分配（每日最多3只）</div>
+                <div id="unvaccinated-list" class="mb-4 max-h-[200px] overflow-y-auto scrollbar-hide bg-black/20 rounded p-2"><div class="text-sm text-[#aaa] mb-2"><i class="fa fa-info-circle mr-1"></i>点击下方未接种动物进行预约</div></div>
+                <div id="vaccine-date-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3"></div>
+                <div class="text-sm text-[#aaa] mt-3"><i class="fa fa-info-circle mr-1"></i>操作说明：点击未接种动物进行预约，点击已分配动物可取消预约</div>
+            </div>
+        </div>
+
+        <div class="card" id="ahp-card">
+            <div class="card-title"><i class="fa fa-calculator"></i> 危险性及重点关注列表</div>
+
+            <div class="bg-black/30 rounded-lg p-4 mb-4">
+                <div class="text-sm text-[#ce93d8] mb-3"><i class="fa fa-sliders"></i> 准则权重调节</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="text-xs text-gray-400"> 距上次接种时间</label>
+                        <input type="range" id="weight-time" min="0" max="100" value="55" class="weight-slider">
+                        <span id="weight-time-val" class="weight-value">0.55</span>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400"> 绝育状态</label>
+                        <input type="range" id="weight-neuter" min="0" max="100" value="24" class="weight-slider">
+                        <span id="weight-neuter-val" class="weight-value">0.24</span>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400"> 种类（猫/狗）</label>
+                        <input type="range" id="weight-species" min="0" max="100" value="21" class="weight-slider">
+                        <span id="weight-species-val" class="weight-value">0.21</span>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 mt-2 flex justify-between">
+                    <span> 距上次接种时间越久优先级越高 | 未绝育优先级更高 | 可基于当地疾病传播数据调整种类权重</span>
+                    <button id="reset-weights" class="text-[#00a8ff] hover:text-[#00c8ff] text-xs"><i class="fa fa-refresh"></i> 重置默认</button>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-4">
+                <button id="run-ahp-btn" class="btn btn-ahp py-2 px-6 rounded-lg"><i class="fa fa-line-chart mr-2"></i> 开始分析</button>
+                <div class="text-xs text-gray-500"><i class="fa fa-info-circle"></i> 基于综合三个准则计算最佳接种顺序</div>
+            </div>
+
+            <div id="ahp-result-container" class="max-h-[400px] overflow-y-auto">
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fa fa-chart-line fa-2x mb-2"></i>
+                    <p>点击“开始分析”获取智能接种顺序</p>
+                    <p class="text-xs mt-2">综合考虑：上次接种时间(越久越优先) + 未绝育优先 + 种类权重</p>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button id="toggle-score-detail" class="text-xs text-[#00a8ff] hover:text-[#00c8ff]"><i class="fa fa-chevron-down mr-1"></i> 查看详细评分表</button>
+                <div id="score-detail" class="hidden mt-3 overflow-x-auto">
+                    <table class="w-full text-xs" id="score-table">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="py-2 px-2 text-left">编号</th>
+                                <th class="py-2 px-2 text-left">名称</th>
+                                <th class="py-2 px-2 text-left">时间分</th>
+                                <th class="py-2 px-2 text-left">绝育分</th>
+                                <th class="py-2 px-2 text-left">种类分</th>
+                                <th class="py-2 px-2 text-left">综合得分</th>
+                            </tr>
+                        </thead>
+                        <tbody id="score-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-[#00a8ff] text-lg font-bold mb-4"><i class="fa fa-plus-circle"></i> 新增动物</h3>
+            <div class="form-group"><label>动物编号 *</label><input type="text" id="new-id" placeholder="例如 A009"></div>
+            <div class="form-group"><label>动物名称</label><input type="text" id="new-name" placeholder="例如 小花"></div>
+            <div class="form-group"><label>类型</label><select id="new-type"><option value="犬类">犬类</option><option value="猫类">猫类</option></select></div>
+            <div class="form-group"><label>绝育状态</label><select id="new-neuter"><option value="未绝育">未绝育</option><option value="已绝育">已绝育</option></select></div>
+            <div class="form-group"><label>疫苗接种状态</label><select id="new-vaccinated"><option value="未接种">未接种</option><option value="已接种">已接种</option></select></div>
+            <div class="form-group"><label>上次接种日期</label><input type="date" id="new-last-vaccine"></div>
+            <div class="form-group"><label>存活状态</label><select id="new-alive"><option value="存活">存活</option><option value="离世">离世</option></select></div>
+            <div class="form-group"><label>领养状态</label><select id="new-adopt"><option value="待领养">待领养</option><option value="已领养">已领养</option><option value="申请中">申请中</option><option value="不领养">不领养</option></select></div>
+            <div class="form-group"><label>电量 (%)</label><input type="number" id="new-battery" value="100" min="0" max="100"></div>
+            <div class="form-group"><label>初始经度</label><input type="text" id="new-lng" placeholder="例如 117.0627"></div>
+            <div class="form-group"><label>初始纬度</label><input type="text" id="new-lat" placeholder="例如 39.2404"></div>
+            <div class="flex justify-end gap-2 mt-4"><button class="btn btn-secondary" id="close-add-modal">取消</button><button class="btn btn-primary" id="confirm-add">确认添加</button></div>
+        </div>
+    </div>
+
+    <script>
+        const loginRole = localStorage.getItem('loginRole');
+
+        let animals = JSON.parse(localStorage.getItem('animalData')) || [];
+        let neuterAppointmentData = JSON.parse(localStorage.getItem('appointmentData')) || {};
+        let vaccineAppointmentData = JSON.parse(localStorage.getItem('vaccineData')) || {};
+
+
+        function formatDate(dateStr) {
+            if (!dateStr) return "";
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        // 计算距今天数
+        function daysSince(dateStr) {
+            if (!dateStr) return 999; // 未接种给最大值
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return 999;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const diffTime = today - date;
+            return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function getFutureDates(days = 7) { const dates = []; const today = new Date(); for (let i = 0; i < days; i++) { const date = new Date(today); date.setDate(today.getDate() + i); dates.push({ id: date.toISOString().split('T')[0], text: `${date.getMonth() + 1}月${date.getDate()}日(${['日', '一', '二', '三', '四', '五', '六'][date.getDay()]})` }); } return dates; }
+        const futureDates = getFutureDates();
+
+        // 渲染编辑表格
+        function renderEditTable() {
+            const tbody = document.getElementById('edit-table-body');
+            tbody.innerHTML = '';
+            animals.forEach(animal => {
+                const lastVaccineVal = animal.lastVaccineDate ? formatDate(animal.lastVaccineDate) : '';
+                const tr = `<tr class="border-b border-[rgba(255,255,255,0.05)] hover:bg-[rgba(0,168,255,0.05)]">
+                            <td class="py-3 px-4">${animal.id}</td>
+                            <td class="py-3 px-4">${escapeHtml(animal.name)}</td>
+                            <td class="py-3 px-4"><input type="text" value="${escapeHtml(animal.name)}" id="name-${animal.id}" class="bg-[#1a1f38] border border-[rgba(0,168,255,0.3)] rounded px-2 py-1 text-white w-32"></td>
+                            <td class="py-3 px-4"><select class="bg-[#1a1f38] border border-[rgba(0,168,255,0.3)] rounded px-2 py-1 text-white" id="type-${animal.id}"><option value="犬类" ${animal.type === '犬类' ? 'selected' : ''}>犬类</option><option value="猫类" ${animal.type === '猫类' ? 'selected' : ''}>猫类</option></select></td>
+                            <td class="py-3 px-4"><select class="bg-[#1a1f38] border border-[rgba(0,168,255,0.3)] rounded px-2 py-1 text-white" id="alive-${animal.id}"><option value="存活" ${animal.alive === '存活' ? 'selected' : ''}>存活</option><option value="离世" ${animal.alive === '离世' ? 'selected' : ''}>离世</option></select></td>
+                            <td class="py-3 px-4"><select class="bg-[#1a1f38] border border-[rgba(0,168,255,0.3)] rounded px-2 py-1 text-white" id="vaccinated-${animal.id}" onchange="onVaccinatedChange('${animal.id}')"><option value="未接种" ${animal.vaccinated === '未接种' ? 'selected' : ''}>未接种</option><option value="已接种" ${animal.vaccinated === '已接种' ? 'selected' : ''}>已接种</option></select></td>
+                            <td class="py-3 px-4"><input type="date" value="${lastVaccineVal}" id="lastVaccine-${animal.id}" class="bg-[#1a1f38] border border-[rgba(0,168,255,0.3)] rounded px-2 py-1 text-white w-36"></td>
+                            <td class="py-3 px-4"><button onclick="saveAnimalInfo('${animal.id}')" class="bg-[#00c853] hover:bg-[#00a843] text-white py-1 px-3 rounded text-xs">保存</button></td>
+                         </tr>`;
+                tbody.innerHTML += tr;
+            });
+        }
+
+        // 疫苗接种状态变化时联动清空/设置日期
+        window.onVaccinatedChange = function (animalId) {
+            const vaccSelect = document.getElementById(`vaccinated-${animalId}`);
+            const dateInput = document.getElementById(`lastVaccine-${animalId}`);
+            if (vaccSelect.value === '未接种') {
+                dateInput.value = '';
+            }
+        };
+
+        function saveAnimalInfo(animalId) {
+            const animal = animals.find(a => a.id === animalId);
+            const newName = document.getElementById(`name-${animalId}`).value.trim();
+            if (newName) animal.name = newName;
+            animal.type = document.getElementById(`type-${animalId}`).value;
+            animal.alive = document.getElementById(`alive-${animalId}`).value;
+            animal.vaccinated = document.getElementById(`vaccinated-${animalId}`).value;
+            const lastVaccineDate = document.getElementById(`lastVaccine-${animalId}`).value;
+            animal.lastVaccineDate = lastVaccineDate || null;
+
+            // 同步逻辑：如果有接种日期且不为空，则疫苗接种状态设为已接种
+            if (animal.lastVaccineDate && animal.lastVaccineDate !== '') {
+                animal.vaccinated = "已接种";
+            } else {
+                animal.vaccinated = "未接种";
+            }
+
+            localStorage.setItem('animalData', JSON.stringify(animals));
+            renderEditTable();
+            renderUnneuteredList();
+            renderUnvaccinatedList();
+            renderNeuterCalendar();
+            renderVaccineCalendar();
+            alert('修改成功！');
+        }
+
+        function renderUnneuteredList() {
+            const container = document.getElementById('unneutered-list');
+            container.innerHTML = '<div class="text-sm text-[#aaa] mb-2"><i class="fa fa-info-circle mr-1"></i>点击下方未绝育动物进行预约</div>';
+            const list = animals.filter(a => a.neuter === '未绝育' && a.alive === '存活');
+            if (list.length === 0) { container.innerHTML += '<div class="text-center py-4 text-[#aaa]">暂无未绝育动物</div>'; return; }
+            list.forEach(animal => {
+                const appointed = Object.values(neuterAppointmentData).some(d => d.some(a => a.id === animal.id));
+                container.innerHTML += `<div class="p-2 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center"><div><span class="font-medium">${animal.id} ${escapeHtml(animal.name)}</span> <span class="badge ${animal.type === '犬类' ? 'badge-warning' : 'badge-success'} text-xs">${animal.type}</span></div>${appointed ? '<span class="badge badge-success text-xs">已预约</span>' : `<button onclick="selectAnimalForNeuter('${animal.id}')" class="bg-[#00a8ff] text-white py-1 px-3 rounded text-xs">预约绝育</button>`}</div>`;
+            });
+        }
+
+        function selectAnimalForNeuter(animalId) {
+            const tips = futureDates.map((d, i) => `${i + 1}. ${d.text}`).join('\n');
+            const idx = prompt(`选择绝育预约日期：\n${tips}\n\n（每日最多3只）`);
+            if (!idx || isNaN(idx) || idx < 1 || idx > futureDates.length) return;
+            const date = futureDates[idx - 1];
+            if (neuterAppointmentData[date.id]?.length >= 3) { alert('当天已满3只，无法预约！'); return; }
+            if (!neuterAppointmentData[date.id]) neuterAppointmentData[date.id] = [];
+            const animal = animals.find(a => a.id === animalId);
+            neuterAppointmentData[date.id].push({ id: animal.id, name: animal.name, type: animal.type });
+            localStorage.setItem('appointmentData', JSON.stringify(neuterAppointmentData));
+            renderUnneuteredList(); renderNeuterCalendar();
+            alert('绝育预约成功！');
+        }
+
+        function renderNeuterCalendar() {
+            const container = document.getElementById('neuter-date-container'); container.innerHTML = '';
+            futureDates.forEach(date => {
+                const list = neuterAppointmentData[date.id] || []; const full = list.length >= 3;
+                let html = `<div class="date-cell ${full ? 'full' : ''}"><div class="font-medium text-[#00a8ff]"> ${date.text}</div><div class="text-xs text-[#ccc] my-1">已预约：${list.length}/3</div>`;
+                if (list.length === 0) html += '<div class="text-xs text-[#aaa]">暂无预约</div>';
+                else list.forEach((a, i) => { html += `<div class="text-xs p-1 bg-black/30 rounded my-1 flex justify-between"><span>${i + 1}. ${escapeHtml(a.name)}</span><button onclick="cancelNeuter('${date.id}',${i})" class="text-[#ff5252]">取消</button></div>`; });
+                html += '</div>'; container.innerHTML += html;
+            });
+        }
+
+        function cancelNeuter(dateId, idx) { if (!confirm('确定取消绝育预约？')) return; neuterAppointmentData[dateId].splice(idx, 1); if (neuterAppointmentData[dateId].length === 0) delete neuterAppointmentData[dateId]; localStorage.setItem('appointmentData', JSON.stringify(neuterAppointmentData)); renderUnneuteredList(); renderNeuterCalendar(); }
+
+        // 疫苗接种预约
+        function renderUnvaccinatedList() {
+            const container = document.getElementById('unvaccinated-list');
+            container.innerHTML = '<div class="text-sm text-[#aaa] mb-2"><i class="fa fa-info-circle mr-1"></i>点击下方未接种动物进行预约</div>';
+            const list = animals.filter(a => a.vaccinated === '未接种' && a.alive === '存活');
+            if (list.length === 0) { container.innerHTML += '<div class="text-center py-4 text-[#aaa]">暂无未接种动物</div>'; return; }
+            list.forEach(animal => {
+                const appointed = Object.values(vaccineAppointmentData).some(d => d.some(a => a.id === animal.id));
+                container.innerHTML += `<div class="p-2 border-b border-[rgba(255,255,255,0.05)] flex justify-between items-center"><div><span class="font-medium">${animal.id} ${escapeHtml(animal.name)}</span> <span class="badge ${animal.type === '犬类' ? 'badge-warning' : 'badge-success'} text-xs">${animal.type}</span></div>${appointed ? '<span class="badge badge-info text-xs">已预约</span>' : `<button onclick="selectAnimalForVaccine('${animal.id}')" class="bg-[#ba68c8] text-white py-1 px-3 rounded text-xs">预约疫苗</button>`}</div>`;
+            });
+        }
+
+        function selectAnimalForVaccine(animalId) {
+            const tips = futureDates.map((d, i) => `${i + 1}. ${d.text}`).join('\n');
+            const idx = prompt(`选择疫苗接种预约日期：\n${tips}\n\n（每日最多3只）`);
+            if (!idx || isNaN(idx) || idx < 1 || idx > futureDates.length) return;
+            const date = futureDates[idx - 1];
+            if (vaccineAppointmentData[date.id]?.length >= 3) { alert('当天已满3只，无法预约疫苗接种！'); return; }
+            if (!vaccineAppointmentData[date.id]) vaccineAppointmentData[date.id] = [];
+            const animal = animals.find(a => a.id === animalId);
+            vaccineAppointmentData[date.id].push({ id: animal.id, name: animal.name, type: animal.type });
+            localStorage.setItem('vaccineData', JSON.stringify(vaccineAppointmentData));
+            renderUnvaccinatedList(); renderVaccineCalendar();
+            alert('疫苗接种预约成功！');
+        }
+
+        function renderVaccineCalendar() {
+            const container = document.getElementById('vaccine-date-container'); container.innerHTML = '';
+            futureDates.forEach(date => {
+                const list = vaccineAppointmentData[date.id] || []; const full = list.length >= 3;
+                let html = `<div class="date-cell ${full ? 'full' : ''}"><div class="font-medium text-[#ba68c8]"> ${date.text}</div><div class="text-xs text-[#ccc] my-1">已预约：${list.length}/3</div>`;
+                if (list.length === 0) html += '<div class="text-xs text-[#aaa]">暂无预约</div>';
+                else list.forEach((a, i) => { html += `<div class="text-xs p-1 bg-black/30 rounded my-1 flex justify-between"><span>${i + 1}. ${escapeHtml(a.name)}</span><button onclick="cancelVaccine('${date.id}',${i})" class="text-[#ff5252]">取消</button></div>`; });
+                html += '</div>'; container.innerHTML += html;
+            });
+        }
+
+        function cancelVaccine(dateId, idx) {
+            if (!confirm('确定取消疫苗接种预约？')) return; vaccineAppointmentData[dateId].splice(idx, 1);
+            if (vaccineAppointmentData[dateId].length === 0) delete vaccineAppointmentData[dateId];
+            localStorage.setItem('vaccineData', JSON.stringify(vaccineAppointmentData));
+            renderUnvaccinatedList();
+            renderVaccineCalendar();
+        }
+
+        function getWeights() {
+            let w1 = parseFloat(document.getElementById('weight-time').value) / 100;
+            let w2 = parseFloat(document.getElementById('weight-neuter').value) / 100;
+            let w3 = parseFloat(document.getElementById('weight-species').value) / 100;
+            // 归一化
+            const sum = w1 + w2 + w3;
+            return { w1: w1 / sum, w2: w2 / sum, w3: w3 / sum };
+        }
+
+        // 计算时间分数
+        function calcTimeScore(days) {
+            // 未接种给 1.0
+            if (days >= 365) return 1.0;
+            return days / 365;
+        }
+
+        // 计算绝育分数
+        function calcNeuterScore(neuter) {
+            return neuter === '未绝育' ? 1.0 : 0.0;
+        }
+
+        // 计算种类分数
+        function calcSpeciesScore(type) {
+            return type === '犬类' ? 0.7 : 0.3;
+        }
+
+        // AHP 
+        function calculateAHPScores() {
+            const { w1, w2, w3 } = getWeights();
+            const aliveAnimals = animals.filter(a => a.alive === '存活');
+
+            const scores = aliveAnimals.map(animal => {
+                const days = daysSince(animal.lastVaccineDate);
+                const timeScore = calcTimeScore(days);
+                const neuterScore = calcNeuterScore(animal.neuter);
+                const speciesScore = calcSpeciesScore(animal.type);
+                const totalScore = w1 * timeScore + w2 * neuterScore + w3 * speciesScore;
+
+                return {
+                    ...animal,
+                    daysSince: days,
+                    timeScore: timeScore,
+                    neuterScore: neuterScore,
+                    speciesScore: speciesScore,
+                    totalScore: totalScore,
+                    lastVaccineDisplay: animal.lastVaccineDate ? formatDate(animal.lastVaccineDate) : '未接种'
+                };
+            });
+
+            // 按综合得分降序排序
+            scores.sort((a, b) => b.totalScore - a.totalScore);
+            return scores;
+        }
+
+        // 渲染 AHP 结果
+        function renderAHPResults() {
+            const scores = calculateAHPScores();
+            const container = document.getElementById('ahp-result-container');
+            const { w1, w2, w3 } = getWeights();
+
+            if (scores.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fa fa-paw"></i><p>暂无存活动物数据</p></div>';
+                return;
+            }
+
+            let html = `<div class="text-xs text-[#ce93d8] mb-3 px-2"> 当前权重：时间 ${(w1 * 100).toFixed(1)}% | 绝育 ${(w2 * 100).toFixed(1)}% | 种类 ${(w3 * 100).toFixed(1)}%</div>`;
+
+            scores.forEach((item, idx) => {
+                const rank = idx + 1;
+                let urgencyLabel = '';
+                let urgencyColor = '';
+                if (item.totalScore >= 0.8) {
+                    urgencyLabel = '紧急';
+                    urgencyColor = '#ff5252';
+                } else if (item.totalScore >= 0.6) {
+                    urgencyLabel = '建议优先';
+                    urgencyColor = '#ffa502';
+                } else if (item.totalScore >= 0.4) {
+                    urgencyLabel = '正常';
+                    urgencyColor = '#00c853';
+                } else {
+                    urgencyLabel = '可延后';
+                    urgencyColor = '#78909c';
+                }
+
+                const timeDesc = item.daysSince >= 999 ? '从未接种' : `${item.daysSince}天前`;
+                const scorePercent = (item.totalScore * 100).toFixed(1);
+
+                html += `
+                        <div class="ahp-result-item">
+                            <div class="flex items-start">
+                                <div class="ahp-rank" style="background: ${urgencyColor};">${rank}</div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-center flex-wrap">
+                                        <div>
+                                            <span class="font-bold text-white">${item.id}</span>
+                                            <span class="ml-2 text-white">${escapeHtml(item.name)}</span>
+                                            <span class="badge ${item.type === '犬类' ? 'badge-warning' : 'badge-success'} ml-2">${item.type}</span>
+                                            <span class="badge ${item.neuter === '已绝育' ? 'badge-success' : 'badge-warning'} ml-1">${item.neuter}</span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-[#ce93d8] font-bold">${scorePercent}</span>
+                                            <span class="badge ml-2" style="background: ${urgencyColor}20; color: ${urgencyColor}; border: 1px solid ${urgencyColor}40;">${urgencyLabel}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-gray-400 mt-1">
+                                        上次接种：${item.lastVaccineDisplay} (${timeDesc}) |
+                                        时间:${item.timeScore.toFixed(2)} |
+                                        绝育:${item.neuterScore.toFixed(2)} |
+                                        种类:${item.speciesScore.toFixed(2)}
+                                    </div>
+                                    <div class="ahp-score-bar">
+                                        <div class="ahp-score-fill" style="width: ${scorePercent}%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+            });
+
+            container.innerHTML = html;
+
+            // 渲染详细评分表
+            renderScoreTable(scores);
+        }
+
+        function renderScoreTable(scores) {
+            const tbody = document.getElementById('score-tbody');
+            tbody.innerHTML = '';
+            scores.forEach(item => {
+                const tr = `
+                        <tr class="border-b border-gray-800">
+                            <td class="py-2 px-2">${item.id}</td>
+                            <td class="py-2 px-2">${escapeHtml(item.name)}</td>
+                            <td class="py-2 px-2">${(item.timeScore * 100).toFixed(1)}%</td>
+                            <td class="py-2 px-2">${(item.neuterScore * 100).toFixed(1)}%</td>
+                            <td class="py-2 px-2">${(item.speciesScore * 100).toFixed(1)}%</td>
+                            <td class="py-2 px-2 font-bold text-[#ce93d8]">${(item.totalScore * 100).toFixed(1)}%</td>
+                        </tr>
+                    `;
+                tbody.innerHTML += tr;
+            });
+        }
+
+        function updateWeightDisplays() {
+            const w1 = parseFloat(document.getElementById('weight-time').value) / 100;
+            const w2 = parseFloat(document.getElementById('weight-neuter').value) / 100;
+            const w3 = parseFloat(document.getElementById('weight-species').value) / 100;
+            const sum = w1 + w2 + w3;
+            document.getElementById('weight-time-val').innerText = (w1 / sum).toFixed(2);
+            document.getElementById('weight-neuter-val').innerText = (w2 / sum).toFixed(2);
+            document.getElementById('weight-species-val').innerText = (w3 / sum).toFixed(2);
+        }
+
+        function resetWeights() {
+            document.getElementById('weight-time').value = 55;
+            document.getElementById('weight-neuter').value = 24;
+            document.getElementById('weight-species').value = 21;
+            updateWeightDisplays();
+            renderAHPResults();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function (m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        function showAddModal() { document.getElementById('add-modal').style.display = 'flex'; }
+        function hideAddModal() { document.getElementById('add-modal').style.display = 'none'; }
+
+        function addNewAnimal() {
+            const id = document.getElementById('new-id').value.trim();
+            if (!id) { alert('请输入动物编号'); return; }
+            if (animals.find(a => a.id === id)) { alert('编号已存在'); return; }
+            const lastVaccineDate = document.getElementById('new-last-vaccine').value || null;
+            const vaccinated = lastVaccineDate ? '已接种' : document.getElementById('new-vaccinated').value;
+            const newAnimal = {
+                id: id,
+                name: document.getElementById('new-name').value.trim() || id,
+                type: document.getElementById('new-type').value,
+                neuter: document.getElementById('new-neuter').value,
+                vaccinated: vaccinated,
+                lastVaccineDate: lastVaccineDate,
+                alive: document.getElementById('new-alive').value,
+                adoptStatus: document.getElementById('new-adopt').value,
+                battery: parseInt(document.getElementById('new-battery').value) || 100,
+                lng: parseFloat(document.getElementById('new-lng').value) || 117.06,
+                lat: parseFloat(document.getElementById('new-lat').value) || 39.24,
+                applicant: "",
+                applyTime: ""
+            };
+            animals.push(newAnimal);
+            localStorage.setItem('animalData', JSON.stringify(animals));
+            renderEditTable();
+            renderUnneuteredList();
+            renderUnvaccinatedList();
+            renderNeuterCalendar();
+            renderVaccineCalendar();
+            hideAddModal();
+            alert('添加成功');
+        }
+
+        // 切换详细评分表显示
+        let detailVisible = false;
+        function toggleScoreDetail() {
+            detailVisible = !detailVisible;
+            const detailDiv = document.getElementById('score-detail');
+            const toggleBtn = document.getElementById('toggle-score-detail');
+            if (detailVisible) {
+                detailDiv.classList.remove('hidden');
+                toggleBtn.innerHTML = '<i class="fa fa-chevron-up mr-1"></i> 收起详细评分表';
+            } else {
+                detailDiv.classList.add('hidden');
+                toggleBtn.innerHTML = '<i class="fa fa-chevron-down mr-1"></i> 查看详细评分表';
+            }
+        }
+
+        window.onload = function () {
+            renderEditTable();
+            renderUnneuteredList();
+            renderUnvaccinatedList();
+            renderNeuterCalendar();
+            renderVaccineCalendar();
+
+            // AHP 相关事件绑定
+            document.getElementById('run-ahp-btn').onclick = () => renderAHPResults();
+            document.getElementById('weight-time').oninput = () => { updateWeightDisplays(); renderAHPResults(); };
+            document.getElementById('weight-neuter').oninput = () => { updateWeightDisplays(); renderAHPResults(); };
+            document.getElementById('weight-species').oninput = () => { updateWeightDisplays(); renderAHPResults(); };
+            document.getElementById('reset-weights').onclick = resetWeights;
+            document.getElementById('toggle-score-detail').onclick = toggleScoreDetail;
+
+            document.getElementById('add-animal-btn').onclick = showAddModal;
+            document.getElementById('close-add-modal').onclick = hideAddModal;
+            document.getElementById('confirm-add').onclick = addNewAnimal;
+            document.getElementById('add-modal').onclick = (e) => {
+                if (e.target === document.getElementById('add-modal')) hideAddModal();
+            };
+
+            updateWeightDisplays();
+            // 初始加载时自动分析一次
+            setTimeout(() => renderAHPResults(), 100);
+        };
+
+        window.saveAnimalInfo = saveAnimalInfo;
+        window.selectAnimalForNeuter = selectAnimalForNeuter;
+        window.cancelNeuter = cancelNeuter;
+        window.selectAnimalForVaccine = selectAnimalForVaccine;
+        window.cancelVaccine = cancelVaccine;
+    </script>
+</body>
+</html>

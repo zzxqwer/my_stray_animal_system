@@ -1,0 +1,898 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>领养动物追踪系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=b65c8e6938b1d3ea53347675ee94e09c"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #fff0f0;
+            color: #3a2525;
+            font-family: "Microsoft YaHei", sans-serif;
+            padding: 20px;
+            position: relative;
+        }
+
+            body::before {
+                content: "";
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-image: url('abc.png');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+                opacity: 0.35;
+                z-index: -1;
+                pointer-events: none;
+            }
+
+        .card {
+            background: rgba(255,248,248,0.94);
+            backdrop-filter: blur(3px);
+            border: 1px solid rgba(180,100,110,0.35);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            color: #b84c5c;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .badge-success {
+            background: rgba(70,120,70,0.15);
+            color: #3a6a3a;
+            border: 1px solid rgba(70,120,70,0.3);
+        }
+
+        .badge-warning {
+            background: rgba(200,140,40,0.12);
+            color: #8a5a1a;
+            border: 1px solid rgba(200,140,40,0.3);
+        }
+
+        .badge-danger {
+            background: rgba(200,70,70,0.12);
+            color: #8a3a3a;
+            border: 1px solid rgba(200,70,70,0.3);
+        }
+
+        .badge-adopt {
+            background: rgba(184,76,92,0.12);
+            color: #b84c5c;
+            border: 1px solid rgba(184,76,92,0.3);
+        }
+
+        .badge-info {
+            background: rgba(100,150,200,0.12);
+            color: #4a6a8a;
+            border: 1px solid rgba(100,150,200,0.3);
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(200,120,130,0.08), rgba(200,120,130,0.02));
+            border: 1px solid rgba(180,100,110,0.25);
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+
+            .stat-card .num {
+                font-size: 28px;
+                font-weight: bold;
+                color: #b84c5c;
+            }
+
+            .stat-card .label {
+                font-size: 12px;
+                color: #7a5a5a;
+            }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #d47f8f;
+            color: #fff;
+        }
+
+            .btn-primary:hover {
+                background: #b84c5c;
+            }
+
+        .btn-secondary {
+            background: rgba(0,0,0,0.06);
+            color: #6a4a4a;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+            .btn-secondary:hover {
+                background: rgba(0,0,0,0.12);
+            }
+
+        .btn-approve {
+            background: #4caf50;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 6px;
+        }
+
+            .btn-approve:hover {
+                background: #45a049;
+            }
+
+        .btn-reject {
+            background: #f44336;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+            .btn-reject:hover {
+                background: #d32f2f;
+            }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .modal-content {
+            background: #fff8f8;
+            border: 1px solid #d47f8f;
+            border-radius: 8px;
+            width: 800px;
+            max-width: 90%;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: row;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 5px;
+                color: #b84c5c;
+                font-size: 14px;
+            }
+
+            .form-group input, .form-group select, .form-group textarea {
+                width: 100%;
+                padding: 8px 10px;
+                background: rgba(0,0,0,0.02);
+                border: 1px solid #e0c0c0;
+                border-radius: 4px;
+                color: #3a2525;
+            }
+
+                .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+                    outline: none;
+                    border-color: #d47f8f;
+                }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: rgba(180,100,110,0.1);
+            color: #b84c5c;
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(180,100,110,0.3);
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            color: #3a2525;
+        }
+
+        tr:hover {
+            background: rgba(180,100,110,0.06);
+        }
+
+        .list-container {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .map-popup {
+            width: 100%;
+            height: 400px;
+        }
+
+        .info-sidebar {
+            width: 280px;
+            padding: 20px;
+            background: rgba(255,248,248,0.96);
+            border-left: 1px solid #d47f8f;
+        }
+
+            .info-sidebar h4 {
+                color: #b84c5c;
+                margin-bottom: 12px;
+                font-size: 16px;
+                border-bottom: 1px solid rgba(180,100,110,0.3);
+                padding-bottom: 5px;
+            }
+
+            .info-sidebar p {
+                margin: 8px 0;
+                font-size: 13px;
+                color: #4a3030;
+                word-break: break-word;
+            }
+
+        .close-modal-btn {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #8a6a6a;
+            z-index: 10001;
+        }
+
+            .close-modal-btn:hover {
+                color: #b84c5c;
+            }
+
+        .admin-tag {
+            background: #b84c5c20;
+            color: #b84c5c;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .animal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .animal-card {
+            background: white;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+            .animal-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+            }
+
+        .animal-card-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f0e0d0;
+        }
+
+        .animal-card-body {
+            padding: 1rem;
+        }
+
+        .animal-card-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #b84c5c;
+            margin-bottom: 0.5rem;
+        }
+
+        .animal-card-info {
+            font-size: 0.85rem;
+            color: #6a4a4a;
+            margin-bottom: 0.3rem;
+        }
+
+        .admin-edit-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #b84c5c;
+            transition: all 0.2s;
+            z-index: 2;
+        }
+
+            .admin-edit-icon:hover {
+                background: white;
+                transform: scale(1.05);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            }
+    </style>
+</head>
+<body>
+    <div class="max-w-7xl mx-auto">
+        <div class="mb-4 flex gap-2 items-center flex-wrap">
+            <button onclick="window.location.href='网站首页.html'" class="bg-[#00a8ff] hover:bg-[#0088dd] text-white py-2 px-4 rounded"><i class="fa fa-arrow-left mr-1"></i>返回网站首页</button>
+            <button id="show-apply-btn" class="bg-[#ba68c8] hover:bg-[#9c27b0] text-white py-2 px-4 rounded"><i class="fa fa-heart mr-1"></i>提交领养申请</button>
+            <div id="admin-badge" class="hidden admin-tag"><i class="fa fa-shield"></i> 管理员模式</div>
+            <button id="admin-add-animal-btn" class="hidden bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"><i class="fa fa-plus mr-1"></i>新增动物信息</button>
+        </div>
+
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div class="card"><div class="stat-card"><div class="label">🐾 待领养动物</div><div class="num" id="wait-adopt-count">0</div></div></div>
+            <div class="card"><div class="stat-card"><div class="label">✅ 已领养动物</div><div class="num" id="adopted-count">0</div></div></div>
+            <div class="card"><div class="stat-card"><div class="label">📝 申请中</div><div class="num" id="applying-count">0</div></div></div>
+            <div class="card"><div class="stat-card"><div class="label">🚫 不领养</div><div class="num" id="not-adopt-count">0</div></div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa fa-image"></i> 待领养动物图鉴</div>
+            <div id="animal-cards-container" class="animal-grid">
+                <div class="col-span-full text-center text-gray-400 py-8">加载中...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa fa-list"></i> 可领养动物列表</div>
+            <div class="list-container scrollbar-hide">
+                <table id="adopt-table">
+                    <thead><tr><th>编号</th><th>名称</th><th>类型</th><th>绝育状态</th><th>疫苗接种</th><th>操作</th></tr></thead>
+                    <tbody id="adopt-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa fa-home"></i> 收养追踪系统</div>
+            <div class="list-container scrollbar-hide">
+                <table id="adopted-table">
+                    <thead><tr><th>编号</th><th>名称</th><th>类型</th><th>收养人信息</th><th>收养时间</th><th>操作</th></tr></thead>
+                    <tbody id="adopted-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="applications-card" class="card hidden">
+            <div class="card-title"><i class="fa fa-file-text-o"></i> 领养申请书管理</div>
+            <div class="list-container scrollbar-hide">
+                <table id="applications-table">
+                    <thead><tr><th>编号</th><th>名称</th><th>类型</th><th>申请人信息</th><th>申请时间</th><th>操作</th></tr></thead>
+                    <tbody id="applications-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="apply-modal" class="modal">
+            <div class="modal-content" style="width:500px; display:block; padding:20px;">
+                <h3 class="text-[#00a8ff] text-lg font-bold mb-4"><i class="fa fa-heart mr-2"></i> 提交领养申请</h3>
+                <form id="adopt-form">
+                    <div class="form-group"><label>选择动物 *</label><select id="animal-select" required><option value="">-- 请选择 --</option></select></div>
+                    <div class="form-group"><label>申请人姓名 *</label><input type="text" id="applicant-name" required></div>
+                    <div class="form-group"><label>联系电话 *</label><input type="tel" id="applicant-phone" required></div>
+                    <div class="form-group"><label>居住地址</label><textarea id="applicant-address" rows="2"></textarea></div>
+                    <div class="form-group"><label>领养理由</label><textarea id="adopt-reason" rows="2"></textarea></div>
+                    <div class="flex justify-end gap-2 mt-4"><button type="button" class="btn btn-secondary" id="close-apply-modal">取消</button><button type="submit" class="btn btn-primary">提交申请</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div id="detail-modal" class="modal">
+            <div class="modal-content">
+                <span id="close-detail-modal" class="close-modal-btn">&times;</span>
+                <div id="detail-map" class="map-popup"></div>
+                <div class="info-sidebar" id="detail-info"></div>
+            </div>
+        </div>
+
+        <div id="edit-animal-modal" class="modal">
+            <div class="modal-content" style="width:500px; display:block; padding:20px;">
+                <h3 class="text-[#b84c5c] text-lg font-bold mb-4"><i class="fa fa-pencil-square-o"></i> 编辑动物展示信息</h3>
+                <form id="edit-animal-form">
+                    <input type="hidden" id="edit-animal-id">
+                    <div class="form-group"><label>动物名字</label><input type="text" id="edit-name" readonly class="bg-gray-100"></div>
+                    <div class="form-group"><label>体重 (如 5.2kg)</label><input type="text" id="edit-weight" placeholder="例: 5.2kg"></div>
+                    <div class="form-group"><label>简短描述</label><textarea id="edit-description" rows="2" placeholder="性格、年龄、健康状况等"></textarea></div>
+                    <div class="form-group"><label>当前照片</label><div id="current-photo-preview" class="mb-2"><img id="edit-photo-preview" style="max-width:100%; max-height:150px; border-radius:8px;"></div><input type="file" id="edit-photo-file" accept="image/*"></div>
+                    <div class="flex justify-end gap-2 mt-4"><button type="button" class="btn btn-secondary" id="close-edit-modal">取消</button><button type="submit" class="btn btn-primary">保存修改</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div id="add-animal-modal" class="modal">
+            <div class="modal-content" style="width:500px; display:block; padding:20px;">
+                <h3 class="text-[#b84c5c] text-lg font-bold mb-4"><i class="fa fa-plus-circle"></i> 为动物补录展示信息</h3>
+                <form id="add-animal-form">
+                    <div class="form-group"><label>选择动物 (来自待领养库) *</label><select id="add-animal-id-select" required><option value="">-- 请选择 --</option></select></div>
+                    <div class="form-group"><label>体重 (如 5.2kg)</label><input type="text" id="add-weight" placeholder="例: 5.2kg"></div>
+                    <div class="form-group"><label>简短描述</label><textarea id="add-description" rows="2" placeholder="性格、年龄、健康状况等"></textarea></div>
+                    <div class="form-group"><label>上传照片</label><input type="file" id="add-photo-file" accept="image/*" required></div>
+                    <div class="flex justify-end gap-2 mt-4"><button type="button" class="btn btn-secondary" id="close-add-modal">取消</button><button type="submit" class="btn btn-primary">添加</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5001';
+        // 获取当前用户角色
+        function getCurrentUserRole() {
+            return sessionStorage.getItem('stray_role');
+        }
+        function getCurrentUsername() {
+            return sessionStorage.getItem('stray_user');
+        }
+
+        // 通用 fetch 封装，自动添加管理员请求头
+        async function apiFetch(url, options = {}) {
+            const role = getCurrentUserRole();
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            if (role === 'admin') {
+                headers['X-User-Role'] = 'admin';
+            }
+            const response = await fetch(url, { ...options, headers });
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.error || `HTTP ${response.status}`);
+            }
+            return response.json();
+        }
+
+        let animals = JSON.parse(localStorage.getItem('animalData')) || [];
+        function saveAnimals() { localStorage.setItem('animalData', JSON.stringify(animals)); }
+
+        function isAdoptable(animal) {
+            return animal.alive === "存活" && animal.adoptStatus == "待领养" && animal.vaccinated == "已接种";
+        }
+
+        function renderStats() {
+            const wait = animals.filter(a => isAdoptable(a)).length;
+            const adopted = animals.filter(a => a.adoptStatus === "已领养" && a.alive === "存活").length;
+            const applying = animals.filter(a => a.adoptStatus === "申请中" && a.alive === "存活").length;
+            const notAdopt = animals.filter(a => a.adoptStatus === "不领养" && a.alive === "存活").length;
+            document.getElementById('wait-adopt-count').innerText = wait;
+            document.getElementById('adopted-count').innerText = adopted;
+            document.getElementById('applying-count').innerText = applying;
+            document.getElementById('not-adopt-count').innerText = notAdopt;
+        }
+
+        function renderAdoptTable() {
+            const tbody = document.getElementById('adopt-tbody');
+            tbody.innerHTML = '';
+            const adoptableList = animals.filter(a => isAdoptable(a));
+            adoptableList.forEach(animal => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                        <td>${animal.id}</td><td>${animal.name}</td>
+                        <td><span class="badge ${animal.type === '犬类' ? 'badge-warning' : 'badge-success'}">${animal.type}</span></td>
+                        <td><span class="badge badge-success">${animal.neuter}</span></td>
+                        <td><span class="badge badge-success">${animal.vaccinated}</span></td>
+                        <td><button onclick="showApplyForAnimal('${animal.id}')" class="bg-[#00a8ff] text-white py-1 px-3 rounded text-xs">申请领养</button></td>
+                    `;
+                tbody.appendChild(tr);
+            });
+            const select = document.getElementById('animal-select');
+            if (select) {
+                select.innerHTML = '<option value="">-- 请选择 --</option>';
+                adoptableList.forEach(a => {
+                    const option = document.createElement('option');
+                    option.value = a.id;
+                    option.textContent = `${a.id} - ${a.name} (${a.type})`;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        function renderAdoptedTable() {
+            const tbody = document.getElementById('adopted-tbody');
+            tbody.innerHTML = '';
+            const adoptedList = animals.filter(a => a.adoptStatus === "已领养" && a.alive === "存活");
+            adoptedList.forEach(animal => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                        <td>${animal.id}</td><td>${animal.name}</td>
+                        <td><span class="badge ${animal.type === '犬类' ? 'badge-warning' : 'badge-success'}">${animal.type}</span></td>
+                        <td>${animal.applicant || '-'}</td>
+                        <td>${animal.applyTime || '-'}</td>
+                        <td><button onclick="showAdoptedDetail('${animal.id}')" class="bg-[#00c853] text-white py-1 px-3 rounded text-xs"><i class="fa fa-map-marker"></i> 查看详情</button></td>
+                    `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderApplicationsTable() {
+            const tbody = document.getElementById('applications-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const applyingList = animals.filter(a => a.adoptStatus === "申请中" && a.alive === "存活");
+            if (applyingList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">暂无待审批的领养申请</td></tr>';
+                return;
+            }
+            applyingList.forEach(animal => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                        <td>${animal.id}</td><td>${animal.name}</td>
+                        <td><span class="badge ${animal.type === '犬类' ? 'badge-warning' : 'badge-success'}">${animal.type}</span></td>
+                        <td>${animal.applicant || '无'}</td>
+                        <td>${animal.applyTime || '未知'}</td>
+                        <td><button class="btn-approve" onclick="approveAdopt('${animal.id}')"><i class="fa fa-check"></i> 批准</button>
+                            <button class="btn-reject" onclick="rejectAdopt('${animal.id}')"><i class="fa fa-times"></i> 拒绝</button></td>
+                    `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        let currentDetailMap = null;
+        function showAdoptedDetail(animalId) {
+            const animal = animals.find(a => a.id === animalId);
+            if (!animal) return;
+            const modal = document.getElementById('detail-modal');
+            const mapDiv = document.getElementById('detail-map');
+            const infoDiv = document.getElementById('detail-info');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                if (currentDetailMap) currentDetailMap.destroy();
+                currentDetailMap = new AMap.Map(mapDiv, { center: [animal.lng, animal.lat], zoom: 16, mapStyle: "amap://styles/darkblue" });
+                var icon = new AMap.Icon({ size: new AMap.Size(40, 50), image: "https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png", imageSize: new AMap.Size(40, 50) });
+                new AMap.Marker({ position: [animal.lng, animal.lat], map: currentDetailMap, title: animal.name, icon: icon, offset: new AMap.Pixel(-20, -25) });
+                var infoWindow = new AMap.InfoWindow({ content: `<div style="padding:5px 10px; background:white; color:#333; border-radius:4px; border:1px solid #ccc;"><strong>${animal.name}</strong><br>${animal.type}</div>`, offset: new AMap.Pixel(0, -35) });
+                infoWindow.open(currentDetailMap, [animal.lng, animal.lat]);
+                infoDiv.innerHTML = `
+                        <h4><i class="fa fa-paw"></i> 动物信息</h4>
+                        <p><strong>编号：</strong> ${animal.id}</p><p><strong>名称：</strong> ${animal.name}</p><p><strong>类型：</strong> ${animal.type}</p><p><strong>绝育状态：</strong> ${animal.neuter}</p><p><strong>疫苗接种：</strong> ${animal.vaccinated}</p>
+                        <h4 class="mt-3"><i class="fa fa-user"></i> 收养人信息</h4>
+                        <p><strong>申请人：</strong> ${animal.applicant || '无'}</p><p><strong>收养时间：</strong> ${animal.applyTime || '无'}</p>
+                    `;
+            }, 100);
+        }
+        window.showAdoptedDetail = showAdoptedDetail;
+
+        function showApplyForAnimal(animalId) {
+            const animal = animals.find(a => a.id === animalId);
+            if (!animal || !isAdoptable(animal)) { alert('该动物不可申请'); return; }
+            document.getElementById('animal-select').value = animalId;
+            document.getElementById('apply-modal').style.display = 'flex';
+        }
+        window.showApplyForAnimal = showApplyForAnimal;
+
+        function submitAdopt(e) {
+            e.preventDefault();
+            const animalId = document.getElementById('animal-select').value;
+            if (!animalId) { alert('请选择动物'); return; }
+            const name = document.getElementById('applicant-name').value.trim();
+            const phone = document.getElementById('applicant-phone').value.trim();
+            const address = document.getElementById('applicant-address').value.trim();
+            const reason = document.getElementById('adopt-reason').value.trim();
+            if (!name || !phone) { alert('请填写姓名和电话'); return; }
+            const animal = animals.find(a => a.id === animalId);
+            if (!animal || !isAdoptable(animal)) { alert('该动物已不可申请'); return; }
+            let applicantInfo = `姓名:${name} | 电话:${phone}`;
+            if (address) applicantInfo += ` | 地址:${address}`;
+            if (reason) applicantInfo += ` | 理由:${reason}`;
+            animal.adoptStatus = "申请中";
+            animal.applicant = applicantInfo;
+            animal.applyTime = new Date().toLocaleString();
+            saveAnimals();
+            renderStats(); renderAdoptTable(); renderAdoptedTable();
+            if (getCurrentUserRole() === 'admin') renderApplicationsTable();
+            document.getElementById('apply-modal').style.display = 'none';
+            document.getElementById('adopt-form').reset();
+            alert('📋 领养申请已提交，等待管理员审核');
+            // 刷新卡片区的按钮状态（因为可领养状态变化）
+            loadAndRenderCards();
+        }
+
+        function approveAdopt(animalId) {
+            const role = getCurrentUserRole();
+            if (role !== 'admin') { alert('无权限，仅管理员可操作'); return; }
+            const animal = animals.find(a => a.id === animalId);
+            if (animal && animal.adoptStatus === '申请中') {
+                animal.adoptStatus = '已领养';
+                saveAnimals();
+                renderStats(); renderAdoptTable(); renderAdoptedTable();
+                renderApplicationsTable();
+                alert(`✅ 已批准 ${animal.name} 的领养申请！`);
+                loadAndRenderCards(); // 刷新卡片
+            } else { alert('该动物状态已变更，无法批准'); }
+        }
+        window.approveAdopt = approveAdopt;
+
+        function rejectAdopt(animalId) {
+            const role = getCurrentUserRole();
+            if (role !== 'admin') { alert('无权限，仅管理员可操作'); return; }
+            const animal = animals.find(a => a.id === animalId);
+            if (animal && animal.adoptStatus === '申请中') {
+                animal.adoptStatus = '待领养';
+                animal.applicant = '';
+                animal.applyTime = '';
+                saveAnimals();
+                renderStats(); renderAdoptTable(); renderAdoptedTable();
+                renderApplicationsTable();
+                alert(`❌ 已拒绝 ${animal.name} 的领养申请`);
+                loadAndRenderCards();
+            } else { alert('该动物状态已变更，无法拒绝'); }
+        }
+        window.rejectAdopt = rejectAdopt;
+
+        function showApplyModal() { renderAdoptTable(); document.getElementById('apply-modal').style.display = 'flex'; }
+        function hideApplyModal() { document.getElementById('apply-modal').style.display = 'none'; document.getElementById('adopt-form').reset(); }
+
+        async function loadAndRenderCards() {
+            const container = document.getElementById('animal-cards-container');
+            try {
+                const backendAnimals = await apiFetch(`${API_BASE}/api/animals`);
+                if (!backendAnimals.length) {
+                    container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">暂无展示动物，管理员可点击上方按钮添加</div>';
+                    return;
+                }
+                const validIds = animals.filter(a => a.alive === "存活" && (a.adoptStatus === "待领养" || a.adoptStatus === "申请中")).map(a => a.id);
+                const filtered = backendAnimals.filter(b => validIds.includes(b.id));
+                if (filtered.length === 0) {
+                    container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">当前无可展示的待领养动物（可能都已领养）</div>';
+                    return;
+                }
+                const role = getCurrentUserRole();
+                const isAdmin = role === 'admin';
+                container.innerHTML = filtered.map(animal => {
+                    const localAnimal = animals.find(a => a.id === animal.id);
+                    const canApply = localAnimal && isAdoptable(localAnimal);
+                    const applyDisabled = !canApply;
+                    const applyText = !localAnimal ? '状态异常' : (canApply ? '申请领养' : (localAnimal.adoptStatus === '申请中' ? '申请审核中' : '不可领养'));
+                    return `
+                            <div class="animal-card" data-id="${animal.id}">
+                                ${isAdmin ? `<div class="admin-edit-icon" onclick="event.stopPropagation(); openEditModal('${animal.id}')"><i class="fa fa-pencil"></i></div>` : ''}
+                                <img src="${animal.photo_url ? (animal.photo_url.startsWith('http') ? animal.photo_url : API_BASE + animal.photo_url) : 'https://images.unsplash.com/...'}" class="animal-card-img" onerror="this.src='https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400'">
+                                <div class="animal-card-body">
+                                    <div class="animal-card-title">${escapeHtml(animal.name)}</div>
+                                    <div class="animal-card-info"><i class="fa fa-balance-scale"></i> 体重：${animal.weight || '未知'}</div>
+                                    <div class="animal-card-info"><i class="fa fa-info-circle"></i> ${animal.description || '暂无描述'}</div>
+                                    <button class="bg-[#00a8ff] text-white py-1 px-3 rounded text-xs mt-2 ${applyDisabled ? 'opacity-50 cursor-not-allowed' : ''}" ${applyDisabled ? 'disabled' : ''} onclick="${applyDisabled ? '' : `showApplyForAnimal('${animal.id}')`}">${applyText}</button>
+                                </div>
+                            </div>
+                        `;
+                }).join('');
+            } catch (error) {
+                console.error('加载卡片失败:', error);
+                container.innerHTML = '<div class="col-span-full text-center text-red-400 py-8">加载失败，请确保后端服务已启动 (http://localhost:5001)</div>';
+            }
+        }
+
+        function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, function (m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
+
+        // 上传图片
+        async function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const role = getCurrentUserRole();
+            const headers = {};
+            if (role === 'admin') headers['X-User-Role'] = 'admin';
+            const response = await fetch(`${API_BASE}/api/upload`, {
+                method: 'POST',
+                headers: headers,
+                body: formData
+            });
+            if (!response.ok) throw new Error('上传失败');
+            const data = await response.json();
+            return data.url;
+        }
+
+        // 打开编辑模态框
+        let currentEditId = null;
+        async function openEditModal(animalId) {
+            const role = getCurrentUserRole();
+            if (role !== 'admin') { alert('无权限'); return; }
+            currentEditId = animalId;
+            try {
+                const animal = await apiFetch(`${API_BASE}/api/animals/${animalId}`);
+                document.getElementById('edit-animal-id').value = animal.id;
+                document.getElementById('edit-name').value = animal.name;
+                document.getElementById('edit-weight').value = animal.weight || '';
+                document.getElementById('edit-description').value = animal.description || '';
+                const previewImg = document.getElementById('edit-photo-preview');
+                if (animal.photo_url) previewImg.src = `${API_BASE}${animal.photo_url}`;
+                else previewImg.src = 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400';
+                document.getElementById('edit-photo-file').value = '';
+                document.getElementById('edit-animal-modal').style.display = 'flex';
+            } catch (err) {
+                alert('获取动物信息失败: ' + err.message);
+            }
+        }
+        window.openEditModal = openEditModal;
+
+        // 保存编辑
+        document.getElementById('edit-animal-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-animal-id').value;
+            const weight = document.getElementById('edit-weight').value;
+            const description = document.getElementById('edit-description').value;
+            const photoFile = document.getElementById('edit-photo-file').files[0];
+            let photoUrl = null;
+            if (photoFile) {
+                try {
+                    photoUrl = await uploadImage(photoFile);
+                } catch (err) { alert('图片上传失败: ' + err.message); return; }
+            }
+            const updateData = { weight, description };
+            if (photoUrl) updateData.photo_url = photoUrl;
+            try {
+                await apiFetch(`${API_BASE}/api/animals/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updateData)
+                });
+                alert('更新成功');
+                document.getElementById('edit-animal-modal').style.display = 'none';
+                loadAndRenderCards();
+            } catch (err) { alert('更新失败: ' + err.message); }
+        });
+
+        // 新增动物弹窗逻辑
+        function openAddModal() {
+            const role = getCurrentUserRole();
+            if (role !== 'admin') { alert('无权限'); return; }
+            const existingBackendIds = []; // 稍后异步获取
+            apiFetch(`${API_BASE}/api/animals`).then(backendList => {
+                const existingIds = backendList.map(b => b.id);
+                const availableAnimals = animals.filter(a => a.alive === "存活" && a.adoptStatus === "待领养" && !existingIds.includes(a.id));
+                const select = document.getElementById('add-animal-id-select');
+                select.innerHTML = '<option value="">-- 请选择 --</option>';
+                availableAnimals.forEach(a => {
+                    const option = document.createElement('option');
+                    option.value = a.id;
+                    option.textContent = `${a.id} - ${a.name} (${a.type})`;
+                    select.appendChild(option);
+                });
+                if (availableAnimals.length === 0) {
+                    alert('没有可添加的动物（所有待领养动物都已存在展示信息）');
+                    return;
+                }
+                document.getElementById('add-weight').value = '';
+                document.getElementById('add-description').value = '';
+                document.getElementById('add-photo-file').value = '';
+                document.getElementById('add-animal-modal').style.display = 'flex';
+            }).catch(() => { alert('无法获取后端动物列表'); });
+        }
+
+        document.getElementById('add-animal-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('add-animal-id-select').value;
+            if (!id) { alert('请选择动物'); return; }
+            const name = animals.find(a => a.id === id)?.name || '';
+            const weight = document.getElementById('add-weight').value;
+            const description = document.getElementById('add-description').value;
+            const photoFile = document.getElementById('add-photo-file').files[0];
+            if (!photoFile) { alert('请上传照片'); return; }
+            let photoUrl;
+            try {
+                photoUrl = await uploadImage(photoFile);
+            } catch (err) { alert('图片上传失败: ' + err.message); return; }
+            try {
+                await apiFetch(`${API_BASE}/api/animals`, {
+                    method: 'POST',
+                    body: JSON.stringify({ id, name, weight, description, photo_url: photoUrl })
+                });
+                alert('添加成功');
+                document.getElementById('add-animal-modal').style.display = 'none';
+                loadAndRenderCards();
+            } catch (err) { alert('添加失败: ' + err.message); }
+        });
+
+        // 管理员区域初始化
+        function initAdminArea() {
+            const role = getCurrentUserRole();
+            const adminCard = document.getElementById('applications-card');
+            const adminBadge = document.getElementById('admin-badge');
+            const addBtn = document.getElementById('admin-add-animal-btn');
+            if (role === 'admin') {
+                if (adminCard) adminCard.classList.remove('hidden');
+                if (adminBadge) adminBadge.classList.remove('hidden');
+                if (addBtn) addBtn.classList.remove('hidden');
+                renderApplicationsTable();
+                addBtn.onclick = openAddModal;
+            } else {
+                if (adminCard) adminCard.classList.add('hidden');
+                if (adminBadge) adminBadge.classList.add('hidden');
+                if (addBtn) addBtn.classList.add('hidden');
+            }
+        }
+
+        window.onload = () => {
+            renderStats(); renderAdoptTable(); renderAdoptedTable();
+            initAdminArea();
+            loadAndRenderCards();  // 加载卡片
+            document.getElementById('show-apply-btn').onclick = showApplyModal;
+            document.getElementById('close-apply-modal').onclick = hideApplyModal;
+            document.getElementById('adopt-form').addEventListener('submit', submitAdopt);
+            document.getElementById('apply-modal').onclick = (e) => { if (e.target === document.getElementById('apply-modal')) hideApplyModal(); };
+            const detailModal = document.getElementById('detail-modal');
+            document.getElementById('close-detail-modal').onclick = () => { detailModal.style.display = 'none'; if (currentDetailMap) currentDetailMap.destroy(); };
+            detailModal.onclick = (e) => { if (e.target === detailModal) { detailModal.style.display = 'none'; if (currentDetailMap) currentDetailMap.destroy(); } };
+            // 编辑/新增弹窗关闭按钮
+            document.getElementById('close-edit-modal').onclick = () => document.getElementById('edit-animal-modal').style.display = 'none';
+            document.getElementById('close-add-modal').onclick = () => document.getElementById('add-animal-modal').style.display = 'none';
+            document.getElementById('edit-animal-modal').onclick = (e) => { if (e.target === document.getElementById('edit-animal-modal')) document.getElementById('edit-animal-modal').style.display = 'none'; };
+            document.getElementById('add-animal-modal').onclick = (e) => { if (e.target === document.getElementById('add-animal-modal')) document.getElementById('add-animal-modal').style.display = 'none'; };
+            // 定时同步（原有）
+            setInterval(() => {
+                const fresh = localStorage.getItem('animalData');
+                if (fresh) {
+                    const newAnimals = JSON.parse(fresh);
+                    if (JSON.stringify(animals) !== JSON.stringify(newAnimals)) {
+                        animals = newAnimals;
+                        renderStats(); renderAdoptTable(); renderAdoptedTable();
+                        if (getCurrentUserRole() === 'admin') renderApplicationsTable();
+                        loadAndRenderCards(); // 卡片按钮状态更新
+                    }
+                }
+            }, 2000);
+        };
+    </script>
+</body>
+</html>

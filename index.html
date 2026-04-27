@@ -1,0 +1,989 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流浪动物定位管理系统 - 社区大屏（优化版）</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=b65c8e6938b1d3ea53347675ee94e09c"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@4.3.7/dist/mqtt.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #fff0f0;
+            color: #5a3e3e;
+            font-family: "Microsoft YaHei", system-ui, sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            padding-bottom: 30px;
+            position: relative;
+        }
+
+            body::before {
+                content: "";
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-image: url('adb.png');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+                opacity: 0.12;
+                z-index: -1;
+                pointer-events: none;
+            }
+
+        .header {
+            height: 60px;
+            background: linear-gradient(180deg, rgba(255,182,193,0.25) 0%, rgba(255,182,193,0) 100%);
+            border-bottom: 1px solid rgba(255,105,180,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+        }
+
+            .header h1 {
+                font-size: 22px;
+                font-weight: bold;
+                color: #c46a7a;
+                text-shadow: 0 0 8px rgba(255,182,193,0.6);
+            }
+
+        .time {
+            color: #8b6b6b;
+            font-size: 14px;
+        }
+
+        .map-container {
+            height: 40vh;
+            min-height: 300px;
+            margin: 15px 30px;
+            border: 1px solid rgba(255,105,180,0.25);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .content-row {
+            display: flex;
+            gap: 15px;
+            padding: 0 30px 15px;
+        }
+
+        .panel {
+            background: rgba(255,252,252,0.9);
+            border: 1px solid rgba(255,105,180,0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(3px);
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #c46a7a;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar-thumb {
+            background: rgba(196,106,122,0.3);
+            border-radius: 3px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,182,193,0.12), rgba(255,182,193,0.04));
+            border: 1px solid rgba(255,105,180,0.2);
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+
+            .stat-card .num {
+                font-size: 28px;
+                font-weight: bold;
+                color: #d47f8f;
+            }
+
+            .stat-card .label {
+                font-size: 12px;
+                color: #9a7a7a;
+            }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: rgba(255,182,193,0.12);
+            color: #c46a7a;
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,105,180,0.2);
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            color: #5a3e3e;
+        }
+
+        tr:hover {
+            background: rgba(255,182,193,0.08);
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .badge-success {
+            background: rgba(100,180,100,0.15);
+            color: #5a8f5a;
+            border: 1px solid rgba(90,143,90,0.25);
+        }
+
+        .badge-warning {
+            background: rgba(255,193,7,0.12);
+            color: #c97e00;
+            border: 1px solid rgba(201,126,0,0.25);
+        }
+
+        .badge-danger {
+            background: rgba(255,82,82,0.12);
+            color: #c94a4a;
+            border: 1px solid rgba(201,74,74,0.25);
+        }
+
+        .badge-adopt {
+            background: rgba(196,106,122,0.12);
+            color: #c46a7a;
+            border: 1px solid rgba(196,106,122,0.25);
+        }
+
+        .badge-info {
+            background: rgba(100,150,200,0.12);
+            color: #4a6a8a;
+            border: 1px solid rgba(100,150,200,0.3);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-content {
+            background: #fff8f8;
+            border: 1px solid #d47f8f;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            padding: 20px;
+            position: relative;
+        }
+
+            .modal-content h3 {
+                color: #c46a7a;
+            }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 5px;
+                color: #c46a7a;
+                font-size: 14px;
+            }
+
+            .form-group input, .form-group select, .form-group textarea {
+                width: 100%;
+                padding: 8px 10px;
+                background: rgba(0,0,0,0.03);
+                border: 1px solid #e0c0c0;
+                border-radius: 4px;
+                color: #5a3e3e;
+                font-size: 14px;
+            }
+
+                .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+                    outline: none;
+                    border-color: #d47f8f;
+                }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+
+        .btn-primary {
+            background: #d47f8f;
+            color: #fff;
+        }
+
+            .btn-primary:hover {
+                background: #c46a7a;
+            }
+
+        .btn-secondary {
+            background: rgba(0,0,0,0.05);
+            color: #8b6b6b;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+            .btn-secondary:hover {
+                background: rgba(0,0,0,0.1);
+            }
+
+        .left-col {
+            width: 35%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right-col {
+            width: 65%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .list-container {
+            height: 300px;
+            overflow-y: auto;
+        }
+
+        .small-list-container {
+            height: 120px;
+            overflow-y: auto;
+        }
+
+        #pie-neuter, #line-count {
+            width: 100% !important;
+            height: 200px !important;
+            min-height: 200px !important;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #8b6b6b;
+            font-size: 14px;
+        }
+
+        .logout-btn {
+            background: rgba(196,106,122,0.12);
+            color: #c46a7a;
+            border: 1px solid #c46a7a;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+            .logout-btn:hover {
+                background: #c46a7a;
+                color: #fff;
+            }
+
+        .fence-list-item {
+            background: rgba(0,0,0,0.03);
+            border-left: 3px solid #d47f8f;
+            margin-bottom: 8px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .fence-name {
+            font-weight: bold;
+            color: #c46a7a;
+        }
+
+        .fence-actions button {
+            background: none;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+            .fence-actions button:hover {
+                color: #c46a7a;
+            }
+
+        .add-fence-tip {
+            background: rgba(196,106,122,0.1);
+            border: 1px dashed #d47f8f;
+            border-radius: 4px;
+            padding: 6px;
+            text-align: center;
+            font-size: 12px;
+            margin-top: 8px;
+            cursor: pointer;
+            color: #c46a7a;
+        }
+
+            .add-fence-tip:hover {
+                background: rgba(196,106,122,0.2);
+            }
+
+        .mqtt-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            background: rgba(0,0,0,0.04);
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-left: 10px;
+        }
+
+        .status-led {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            background-color: gray;
+        }
+
+            .status-led.connected {
+                background-color: #5a8f5a;
+                box-shadow: 0 0 4px #5a8f5a;
+            }
+
+            .status-led.disconnected {
+                background-color: #c94a4a;
+            }
+
+            .status-led.connecting {
+                background-color: #c97e00;
+            }
+
+        .locate-alert-btn {
+            background: none;
+            border: none;
+            color: #c46a7a;
+            cursor: pointer;
+            font-size: 11px;
+            margin-top: 4px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+            .locate-alert-btn:hover {
+                background: rgba(196,106,122,0.1);
+            }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fa fa-paw mr-2"></i>流浪动物定位管理系统 - 社区大屏</h1>
+        <div class="flex items-center gap-4">
+            <div class="user-info" id="user-info-area"><span id="user-status">未登录</span><button id="login-btn" class="bg-[#00a8ff] hover:bg-[#0088dd] text-white py-1 px-3 rounded text-sm">登录</button><button id="logout-btn" class="logout-btn" style="display: none;">退出</button></div>
+            <button id="predict-btn" class="bg-[#9c27b0] hover:bg-[#7b1fa2] text-white py-2 px-4 rounded transition-colors">
+                <i class="fa fa-line-chart mr-1"></i>种群预测分析
+            </button>
+            <button id="edit-btn" class="bg-[#00a8ff] hover:bg-[#0088dd] text-white py-2 px-4 rounded transition-colors"><i class="fa fa-pencil mr-1"></i>编辑动物信息</button>
+            <div class="mqtt-status" id="mqtt-status"><span class="status-led" id="mqtt-led"></span><span id="mqtt-text">MQTT 未连接</span></div>
+            <div class="time" id="current-time">2026-04-06 00:00:00</div>
+        </div>
+    </div>
+    <div class="map-container"><div id="map"></div></div>
+    <div class="content-row">
+        <div class="left-col">
+            <div class="panel" id="alert-panel"><div class="panel-title"><i class="fa fa-bell"></i> 电子围栏告警记录</div><div id="alert-list" class="small-list-container" style="height: 150px;">暂无告警</div><button id="clear-alerts" class="btn btn-secondary text-xs mt-2">清除告警记录</button></div>
+            <div class="panel"><div class="panel-title"><i class="fa fa-bar-chart"></i>区域统计</div><div class="grid grid-cols-2 gap-3"><div class="stat-card"><div class="label">流浪动物总数</div><div class="num" id="total-count">0</div></div><div class="stat-card"><div class="label">犬类数量</div><div class="num" id="dog-count">0</div></div><div class="stat-card"><div class="label">猫类数量</div><div class="num" id="cat-count">0</div></div><div class="stat-card"><div class="label">低电量率</div><div class="num" id="low-battery-rate">0%</div></div></div></div>
+            <div class="grid grid-cols-2 gap-3"><div class="panel"><div class="panel-title"><i class="fa fa-pie-chart"></i>绝育比例</div><div id="pie-neuter"></div></div><div class="panel"><div class="panel-title"><i class="fa fa-line-chart"></i>告警趋势（近7天）</div><div id="line-count"></div></div></div>
+        </div>
+        <div class="right-col">
+            <div class="panel"><div class="panel-title"><i class="fa fa-list"></i>全部动物监测列表</div><div class="list-container scrollbar-hide"><table id="animal-table"><thead><tr><th>编号</th><th>名称</th><th>类型</th><th>绝育状态</th><th>疫苗接种</th><th>上次接种</th><th>电量</th><th>存活状态</th><th>领养状态</th></tr></thead><tbody id="animal-tbody"></tbody></table></div></div>
+            <div class="grid grid-cols-3 gap-3"><div class="panel"><div class="panel-title"><i class="fa fa-exclamation-circle"></i>未绝育动物</div><div class="small-list-container scrollbar-hide" id="no-neuter-list"></div></div><div class="panel"><div class="panel-title"><i class="fa fa-battery-low"></i>低电量设备</div><div class="small-list-container scrollbar-hide" id="low-battery-list"></div></div><div class="panel"><div class="panel-title"><i class="fa fa-heart-o"></i>待领养动物</div><div class="small-list-container scrollbar-hide" id="wait-adopt-list"></div></div></div>
+            <div class="panel" id="fence-manager-panel" style="display: none;"><div class="panel-title"><i class="fa fa-shield"></i> 电子围栏管理（多区域）</div><div id="fence-list-container" class="small-list-container" style="max-height: 200px;">暂无围栏</div><div class="add-fence-tip" id="add-fence-btn">+ 点击地图添加圆形围栏</div><div class="text-xs text-gray-400 mt-2">提示：点击地图任意位置即可设置圆形围栏中心点，随后输入半径和名称。</div></div>
+        </div>
+    </div>
+    <div class="modal" id="login-modal"><div class="modal-content"><h3 class="text-[#00a8ff] text-lg font-bold mb-4"><i class="fa fa-sign-in"></i> 用户登录</h3><form id="login-form"><div class="form-group"><label>用户名</label><input type="text" id="login-username" placeholder="admin / user" required></div><div class="form-group"><label>密码</label><input type="password" id="login-password" placeholder="密码" required></div><div class="modal-footer"><button type="button" class="btn btn-secondary" id="close-login-modal">取消</button><button type="submit" class="btn btn-primary">登录</button></div></form><div class="text-xs text-gray-400 mt-3 text-center">测试账号：admin / 1（管理员） 或 user / 1（普通用户）</div></div></div>
+    <script>
+        let animals = [], appointmentData = {}, map, mqttClient, currentUser = null, currentRole = null;
+        let fences = [], fenceOverlays = [], alertRecords = [], animalInsideFence = {};
+
+        // 辅助函数：格式化日期显示
+        function formatDate(dateStr) {
+            if (!dateStr) return '未接种';
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        // 计算距今天数
+        function daysSince(dateStr) {
+            if (!dateStr) return 999; // 未接种给最大值
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return 999;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const diffTime = today - date;
+            return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function saveAnimalsToLocal() {
+            localStorage.setItem('animalData', JSON.stringify(animals));
+        }
+        function saveFences() {
+            localStorage.setItem('fences', JSON.stringify(fences));
+            drawAllFences();
+            renderFenceList();
+        }
+        function saveAlertRecords() {
+            localStorage.setItem('alertRecords', JSON.stringify(alertRecords));
+            renderAlertList();
+            refreshLineChart();
+        }
+        function updateUIForLogin() {
+            const userStatusSpan = document.getElementById('user-status'), loginBtn = document.getElementById('login-btn'), logoutBtn = document.getElementById('logout-btn'), editBtn = document.getElementById('edit-btn'), fencePanel = document.getElementById('fence-manager-panel');
+            if (currentUser && currentRole) {
+                userStatusSpan.innerText = `${currentUser} (${currentRole === 'admin' ? '管理员' : '普通用户'})`;
+                loginBtn.style.display = 'none'; logoutBtn.style.display = 'inline-block';
+                if (currentRole === 'admin') {
+                    editBtn.disabled = false; editBtn.style.opacity = '1';
+                    editBtn.style.cursor = 'pointer';
+                    if (fencePanel) fencePanel.style.display = 'block';
+                }
+                else {
+                    editBtn.disabled = true; editBtn.style.opacity = '0.5';
+                    editBtn.style.cursor = 'not-allowed';
+                    if (fencePanel) fencePanel.style.display = 'none';
+                }
+            }
+            else {
+                userStatusSpan.innerText = '未登录';
+                loginBtn.style.display = 'inline-block';
+                logoutBtn.style.display = 'none';
+                editBtn.disabled = true;
+                editBtn.style.opacity = '0.5';
+                editBtn.style.cursor = 'not-allowed';
+                if (fencePanel) fencePanel.style.display = 'none';
+            }
+        }
+        function loadLoginState() {
+            const savedUser = sessionStorage.getItem('loginUser'), savedRole = sessionStorage.getItem('loginRole');
+            if (savedUser && savedRole) {
+                currentUser = savedUser;
+                currentRole = savedRole;
+            } else {
+                currentUser = null;
+                currentRole = null;
+            } updateUIForLogin();
+        }
+        function logout() {
+            currentUser = null;
+            currentRole = null;
+            sessionStorage.removeItem('loginUser');
+            sessionStorage.removeItem('loginRole');
+            updateUIForLogin();
+            alert('已退出登录');
+        }
+        function showLoginModal() {
+            document.getElementById('login-modal').style.display = 'flex';
+        }
+        function hideLoginModal() {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('login-form').reset();
+        }
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value.trim(), password = document.getElementById('login-password').value.trim();
+            if (username === 'admin' && password === '1') {
+                currentUser = 'admin'; currentRole = 'admin';
+                sessionStorage.setItem('loginUser', 'admin');
+                sessionStorage.setItem('loginRole', 'admin');
+                hideLoginModal();
+                updateUIForLogin();
+                alert('管理员登录成功');
+            } else if (username === 'user' && password === '1') {
+                currentUser = 'user'; currentRole = 'user';
+                sessionStorage.setItem('loginUser', 'user');
+                sessionStorage.setItem('loginRole', 'user');
+                hideLoginModal();
+                updateUIForLogin();
+                alert('普通用户登录成功');
+            } else { alert('用户名或密码错误'); }
+        }
+        function initLocalStorage() {
+            let saved = localStorage.getItem('animalData');
+            if (!saved) {
+                const defaultAnimal = {
+                    id: "A001", name: "中华田园犬", type: "犬类", lat: 39.2404, lng: 117.0627,
+                    neuter: "未绝育", vaccinated: "未接种", lastVaccineDate: null, battery: 82,
+                    alive: "存活", adoptStatus: "待领养", applicant: "", applyTime: ""
+                };
+                animals = [defaultAnimal];
+                localStorage.setItem('animalData', JSON.stringify(animals));
+            } else {
+                animals = JSON.parse(saved);
+                animals.forEach(a => {
+                    if (a.lastVaccineDate === undefined) a.lastVaccineDate = null;
+                    if (!a.vaccinated) a.vaccinated = "未接种";
+                });
+                localStorage.setItem('animalData', JSON.stringify(animals));
+            }
+            // 添加或更新柯基犬示例
+            const corgiIndex = animals.findIndex(a => a.id === 'A002');
+            const corgiData = {
+                id: "A002", name: "柯基犬", type: "犬类", lat: 31.2304, lng: 121.4737,
+                neuter: "已绝育", vaccinated: "已接种", lastVaccineDate: "2025-10-15", battery: 95,
+                alive: "存活", adoptStatus: "待领养", applicant: "", applyTime: ""
+            };
+            if (corgiIndex === -1) animals.push(corgiData);
+            else animals[corgiIndex] = { ...animals[corgiIndex], ...corgiData, lastVaccineDate: corgiData.lastVaccineDate };
+
+            // 添加一只未接种疫苗的猫示例
+            const catIndex = animals.findIndex(a => a.id === 'A003');
+            const catData = {
+                id: "A003", name: "橘猫", type: "猫类", lat: 39.245, lng: 117.058,
+                neuter: "未绝育", vaccinated: "未接种", lastVaccineDate: null, battery: 65,
+                alive: "存活", adoptStatus: "待领养", applicant: "", applyTime: ""
+            };
+            if (catIndex === -1) animals.push(catData);
+
+            localStorage.setItem('animalData', JSON.stringify(animals));
+
+            let appointSaved = localStorage.getItem('appointmentData');
+            if (appointSaved) appointmentData = JSON.parse(appointSaved);
+            let fencesSaved = localStorage.getItem('fences');
+            if (fencesSaved) fences = JSON.parse(fencesSaved);
+            else fences = [];
+            let alertsSaved = localStorage.getItem('alertRecords');
+            if (alertsSaved) alertRecords = JSON.parse(alertsSaved);
+        }
+        function initMap() {
+            map = new AMap.Map("map", { zoom: 16, center: [117.06, 39.24], mapStyle: "amap://styles/whitesmoke", viewMode: "3D" });
+            map.on('complete', () => { drawAllFences(); renderMarkers(); });
+            map.on('click', onMapClickForFence);
+        }
+        function onMapClickForFence(e) {
+            if (currentRole !== 'admin') return;
+            if (confirm('是否在此位置创建圆形围栏？')) {
+                const lng = e.lnglat.getLng(), lat = e.lnglat.getLat(), name = prompt('围栏名称', `围栏${fences.length + 1}`), radius = parseFloat(prompt('半径（米）', '200'));
+                if (name && !isNaN(radius)) {
+                    const newFence = { id: Date.now().toString(), name: name, centerLng: lng, centerLat: lat, radius: radius, enabled: true };
+                    fences.push(newFence);
+                    saveFences();
+                    resetAllAnimalsFenceStatus();
+                    alert('围栏已添加');
+                }
+            }
+        }
+        function drawAllFences() {
+            if (!map) return; fenceOverlays.forEach(overlay => map.remove(overlay));
+            fenceOverlays = [];
+            fences.forEach(fence => {
+                if (!fence.enabled) return;
+                const circle = new AMap.Circle({ center: [fence.centerLng, fence.centerLat], radius: fence.radius, strokeColor: "#FF5252", strokeOpacity: 0.8, strokeWeight: 2, fillColor: "#FF5252", fillOpacity: 0.2, bubble: true, extData: fence.id });
+                map.add(circle); fenceOverlays.push(circle);
+            });
+        }
+        function renderFenceList() {
+            const container = document.getElementById('fence-list-container');
+            if (!container) return;
+            if (fences.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-center py-2">暂无围栏，点击地图添加</div>';
+                return;
+            } container.innerHTML = fences.map(fence => `<div class="fence-list-item"><div class="flex justify-between items-center"><div><span class="fence-name">${escapeHtml(fence.name)}</span> (半径 ${fence.radius}m)</div><div class="fence-actions"><label style="color:#ccc; font-size:11px;"><input type="checkbox" ${fence.enabled ? 'checked' : ''} onchange="toggleFence('${fence.id}', this.checked)"> 启用</label><button onclick="deleteFence('${fence.id}')" title="删除"><i class="fa fa-trash"></i></button></div></div><div class="text-xs text-gray-400">中心: ${fence.centerLng.toFixed(5)}, ${fence.centerLat.toFixed(5)}</div></div>`).join('');
+        }
+        window.toggleFence = function (id, enabled) {
+            const fence = fences.find(f => f.id === id);
+            if (fence) {
+                fence.enabled = enabled;
+                saveFences();
+                resetAllAnimalsFenceStatus();
+            }
+        };
+        window.deleteFence = function (id) {
+            if (confirm('删除此围栏？')) {
+                fences = fences.filter(f => f.id !== id);
+                saveFences();
+                resetAllAnimalsFenceStatus();
+            }
+        };
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function (m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        function isPointInAnyFence(lng, lat) {
+            for (let fence of fences) {
+                if (!fence.enabled) continue;
+                const distance = AMap.GeometryUtil.distance([fence.centerLng, fence.centerLat], [lng, lat]);
+                if (distance <= fence.radius) return fence.id;
+            } return null;
+        }
+        function addAlert(animalId, animalName, fenceId) {
+            const fence = fences.find(f => f.id === fenceId);
+            if (!fence)
+                return;
+            const last = alertRecords.find(a => a.animalId === animalId && a.fenceId === fenceId);
+            if (last && (Date.now() - new Date(last.time).getTime() < 5000))
+                return;
+            const record = { animalId, animalName, fenceId, fenceName: fence.name, time: new Date().toLocaleString() };
+            alertRecords.unshift(record);
+            if (alertRecords.length > 100)
+                alertRecords.pop();
+            saveAlertRecords();
+            alert(`⚠️ 告警：${animalName}(${animalId}) 进入围栏「${fence.name}」`);
+            if (Notification.permission === "granted")
+                new Notification("流浪动物围栏告警", { body: `${animalName} 进入 ${fence.name}` });
+        }
+        function checkAnimalFenceStatus(animal) {
+            if (animal.alive !== '存活')
+                return;
+            const insideFenceId = isPointInAnyFence(animal.lng, animal.lat);
+            const prevInsideId = animalInsideFence[animal.id];
+            if (insideFenceId && !prevInsideId) {
+                animalInsideFence[animal.id] = insideFenceId;
+                addAlert(animal.id, animal.name, insideFenceId);
+            }
+            else if (!insideFenceId && prevInsideId) {
+                delete animalInsideFence[animal.id];
+            }
+            else if (insideFenceId && prevInsideId !== insideFenceId) {
+                addAlert(animal.id, animal.name, insideFenceId);
+                animalInsideFence[animal.id] = insideFenceId;
+            }
+        }
+        function resetAllAnimalsFenceStatus() {
+            animalInsideFence = {};
+            animals.forEach(animal => checkAnimalFenceStatus(animal));
+        }
+        function renderAlertList() {
+            const container = document.getElementById('alert-list');
+            if (!container) return;
+            if (alertRecords.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-4">暂无告警记录</div>';
+                return;
+            } container.innerHTML = alertRecords.map((alert, idx) => `<div class="alert-item"><div><i class="fa fa-bell text-red-400"></i> ${escapeHtml(alert.animalName)} (${alert.animalId}) 进入「${escapeHtml(alert.fenceName)}」</div><div class="alert-time">${alert.time}</div><button class="locate-alert-btn" data-id="${alert.animalId}" data-idx="${idx}">📍 定位</button></div>`).join('');
+            document.querySelectorAll('.locate-alert-btn').forEach(btn => {
+                btn.removeEventListener('click', locateAlertHandler);
+                btn.addEventListener('click', locateAlertHandler);
+            });
+        }
+        function locateAlertHandler(e) {
+            const animalId = e.currentTarget.getAttribute('data-id');
+            const animal = animals.find(a => a.id === animalId);
+            if (animal && map) {
+                map.setCenter([animal.lng, animal.lat]);
+                map.setZoom(18);
+                const marker = new AMap.Marker({
+                    map: map, position: [animal.lng, animal.lat], icon: "https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png", offset: new AMap.Pixel(-10, -30)
+                });
+                setTimeout(() => marker.setMap(null), 2000);
+            }
+            else {
+                alert('未找到该动物的位置信息');
+            }
+        }
+        function getWeeklyAlertCount() {
+            const days = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+            const result = new Array(7).fill(0);
+            const now = new Date();
+            for (let i = 0; i < 7; i++) {
+                const dayStart = new Date(now);
+                dayStart.setDate(now.getDate() - i);
+                dayStart.setHours(0, 0, 0, 0);
+                const dayEnd = new Date(dayStart);
+                dayEnd.setDate(dayStart.getDate() + 1);
+                const count = alertRecords.filter(rec => {
+                    const recTime = new Date(rec.time);
+                    return recTime >= dayStart && recTime < dayEnd;
+                }).length;
+                result[6 - i] = count;
+            } return { time: days, count: result };
+        }
+        let lineChartInstance = null;
+        function initCountLine() {
+            const data = getWeeklyAlertCount();
+            const dom = document.getElementById("line-count");
+            if (!dom) return;
+            if (lineChartInstance)
+                lineChartInstance.dispose();
+            lineChartInstance = echarts.init(dom);
+            lineChartInstance.setOption({ backgroundColor: "transparent", tooltip: { trigger: "axis" }, xAxis: { data: data.time, axisLine: { lineStyle: { color: "#00a8ff" } }, axisLabel: { color: "#ccc", fontSize: 11 } }, yAxis: { axisLine: { lineStyle: { color: "#00a8ff" } }, axisLabel: { color: "#ccc", fontSize: 11 } }, grid: { left: 30, right: 10, bottom: 20, top: 10 }, series: [{ type: "line", data: data.count, smooth: true, lineStyle: { color: "#ffc107", width: 2 }, itemStyle: { color: "#ffc107" }, areaStyle: { color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: "rgba(255,193,7,0.3)" }, { offset: 1, color: "rgba(255,193,7,0)" }] } } }] });
+            window.addEventListener("resize", () => {
+                if (lineChartInstance) lineChartInstance.resize();
+            });
+        }
+        function refreshLineChart() {
+            if (lineChartInstance) {
+                const data = getWeeklyAlertCount();
+                lineChartInstance.setOption({ xAxis: { data: data.time }, series: [{ data: data.count }] });
+            } else {
+                initCountLine();
+            }
+        }
+        function initNeuterPie() {
+            const yes = animals.filter(a => a.neuter === "已绝育" && a.alive === "存活").length;
+            const no = animals.filter(a => a.neuter === "未绝育" && a.alive === "存活").length;
+            const chart = echarts.init(document.getElementById("pie-neuter"));
+            chart.setOption({ backgroundColor: "transparent", tooltip: { trigger: "item" }, legend: { bottom: 0, textStyle: { color: "#ccc", fontSize: 12 } }, series: [{ type: "pie", radius: ["40%", "70%"], center: ["50%", "40%"], data: [{ value: yes, name: "已绝育", itemStyle: { color: "#00c853" } }, { value: no, name: "未绝育", itemStyle: { color: "#ffc107" } }], label: { color: "#fff", fontSize: 12, formatter: "{b}: {d}%" } }] });
+            window.addEventListener("resize", () => chart.resize());
+        }
+        function calcStats() {
+            const total = animals.filter(a => a.alive === "存活").length;
+            const dog = animals.filter(a => a.type === "犬类" && a.alive === "存活").length;
+            const cat = animals.filter(a => a.type === "猫类" && a.alive === "存活").length;
+            const lowBattery = animals.filter(a => a.battery < 40 && a.alive === "存活").length;
+            const rate = total > 0 ? ((lowBattery / total) * 100).toFixed(1) : 0;
+            document.getElementById("total-count").innerText = total;
+            document.getElementById("dog-count").innerText = dog; document.getElementById("cat-count").innerText = cat;
+            document.getElementById("low-battery-rate").innerText = `${rate}%`;
+        }
+        function renderAnimalTable() {
+            const tbody = document.getElementById("animal-tbody");
+            tbody.innerHTML = ""; animals.forEach(a => {
+                const batteryClass = a.battery < 40 ? "badge-danger" : (a.battery < 70 ? "badge-warning" : "badge-success");
+                const neuterClass = a.neuter === "已绝育" ? "badge-success" : "badge-warning";
+                const vaccClass = a.vaccinated === "已接种" ? "badge-success" : "badge-danger";
+                const aliveClass = a.alive === "存活" ? "badge-success" : "badge-danger";
+                let adoptClass = "badge-warning";
+                if (a.adoptStatus === "已领养") adoptClass = "badge-success";
+                else if (a.adoptStatus === "申请中") adoptClass = "badge-adopt";
+                else if (a.adoptStatus === "不领养") adoptClass = "badge-danger";
+                const lastVaccineDisplay = a.lastVaccineDate ? formatDate(a.lastVaccineDate) : '<span class="badge badge-danger">未接种</span>';
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td>${a.id}</td><td>${escapeHtml(a.name)}</td><td><span class="badge ${a.type === '犬类' ? 'badge-warning' : 'badge-success'}">${a.type}</span></td><td><span class="badge ${neuterClass}">${a.neuter}</span></td><td><span class="badge ${vaccClass}">${a.vaccinated}</span></td><td>${lastVaccineDisplay}</td><td><span class="badge ${batteryClass}">${a.battery}%</span></td><td><span class="badge ${aliveClass}">${a.alive}</span></td><td><span class="badge ${adoptClass}">${a.adoptStatus}</span></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+        function renderNoNeuterList() {
+            const el = document.getElementById("no-neuter-list");
+            if (!el) return;
+            el.innerHTML = "";
+            const list = animals.filter(a => a.neuter === "未绝育" && a.alive === "存活");
+            if (list.length === 0) {
+                el.innerHTML = '<div class="text-center text-gray-500 py-4">暂无未绝育动物</div>';
+                return;
+            } list.forEach(a => {
+                el.innerHTML += `<div class="p-2 border-b border-gray-700 flex justify-between"><span>${a.id} ${escapeHtml(a.name)} <span class="text-xs text-gray-500">(${a.type})</span></span><span class="badge badge-warning">待绝育</span></div>`;
+            });
+        }
+        function renderLowBatteryList() {
+            const el = document.getElementById("low-battery-list");
+            if (!el) return;
+            el.innerHTML = "";
+            const list = animals.filter(a => a.battery < 40 && a.alive === "存活");
+            if (list.length === 0) {
+                el.innerHTML = '<div class="text-center text-gray-500 py-4">暂无低电量设备</div>';
+                return;
+            } list.forEach(a => {
+                el.innerHTML += `<div class="p-2 border-b border-gray-700 flex justify-between"><span>${a.id} ${escapeHtml(a.name)}</span><span class="badge badge-danger">${a.battery}%</span></div>`;
+            });
+        }
+        function renderWaitAdoptList() {
+            const el = document.getElementById("wait-adopt-list");
+            if (!el) return;
+            el.innerHTML = "";
+            const list = animals.filter(a => a.adoptStatus === "待领养" && a.alive === "存活" && a.neuter === "已绝育" && a.vaccinated === "已接种");
+            if (list.length === 0) {
+                el.innerHTML = '<div class="text-center text-gray-500 py-4">暂无符合条件的待领养动物</div>';
+                return;
+            } list.forEach(a => {
+                el.innerHTML += `<div class="p-2 border-b border-gray-700 flex justify-between"><span>${a.id} ${escapeHtml(a.name)} <span class="text-xs text-gray-500">(${a.type})</span></span><span class="badge badge-adopt">可领养</span></div>`;
+            });
+        }
+        function renderMarkers() {
+            if (!map) return;
+            map.clearMap();
+            drawAllFences();
+            animals.forEach(animal => {
+                if (animal.alive !== "存活") return;
+                const marker = new AMap.Marker({ position: [animal.lng, animal.lat], title: `${animal.name}(${animal.id})`, icon: "https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png" });
+                map.add(marker);
+                const lastVaccineInfo = animal.lastVaccineDate ? `上次接种: ${formatDate(animal.lastVaccineDate)}` : '疫苗: 未接种';
+                const info = new AMap.InfoWindow({ content: `<div style="padding:10px; background:#0a0e27; color:#fff; border-radius:6px;"><p><strong>编号：</strong>${animal.id}</p><p><strong>名称：</strong>${escapeHtml(animal.name)}</p><p><strong>类型：</strong>${animal.type}</p><p><strong>绝育：</strong>${animal.neuter}</p><p><strong>疫苗：</strong>${animal.vaccinated}</p><p><strong>${lastVaccineInfo}</strong></p><p><strong>电量：</strong>${animal.battery}%</p><p><strong>领养状态：</strong>${animal.adoptStatus}</p></div>`, offset: new AMap.Pixel(0, -30) });
+                marker.on('click', () => info.open(map, marker.getPosition()));
+            });
+        }
+        function renderAll() {
+            calcStats();
+            renderAnimalTable();
+            renderNoNeuterList();
+            renderLowBatteryList();
+            renderWaitAdoptList();
+            initNeuterPie();
+            renderMarkers();
+        }
+        function updateMqttStatus(status, text) {
+            const led = document.getElementById('mqtt-led');
+            const textSpan = document.getElementById('mqtt-text');
+            if (led) {
+                led.className = 'status-led ' + status;
+                textSpan.innerText = text;
+            }
+        }
+        function initMQTT() {
+            const mqttHost = "broker.emqx.io", mqttPort = "8083/mqtt", mqttTopic = "animal/gps/data", clientId = "web_dashboard_" + Math.random().toString(16).substr(2, 8);
+            updateMqttStatus('connecting', 'MQTT 连接中...');
+            mqttClient = mqtt.connect(`ws://${mqttHost}:${mqttPort}`, { keepalive: 60, clientId, protocolId: 'MQTT', protocolVersion: 4, clean: true, reconnectPeriod: 1000, connectTimeout: 30 * 1000 });
+            mqttClient.on('connect', () => {
+                console.log("MQTT 连接成功");
+                updateMqttStatus('connected', 'MQTT 已连接');
+                mqttClient.subscribe(mqttTopic, (err) => {
+                    if (!err) console.log("订阅成功");
+                });
+            });
+            mqttClient.on('message', (topic, message) => {
+                try {
+                    const payload = JSON.parse(message.toString());
+                    const { animalID, lat, lng, battery, lastVaccineDate } = payload;
+                    if (!animalID) return;
+                    const animal = animals.find(a => a.id === animalID);
+                    if (animal) {
+                        if (lat !== undefined && lng !== undefined) {
+                            animal.lat = lat;
+                            animal.lng = lng;
+                        }
+                        if (battery !== undefined) animal.battery = battery;
+                        // 处理上次疫苗接种时间
+                        if (lastVaccineDate !== undefined) {
+                            animal.lastVaccineDate = lastVaccineDate;
+                            // 同步更新疫苗接种状态：如果有接种日期且不为空，则设为已接种
+                            if (lastVaccineDate && lastVaccineDate !== '') {
+                                animal.vaccinated = "已接种";
+                            } else {
+                                animal.vaccinated = "未接种";
+                            }
+                        }
+                        saveAnimalsToLocal();
+                        renderMarkers();
+                        renderAnimalTable();
+                        checkAnimalFenceStatus(animal);
+                        console.log(`已更新 ${animalID} 位置及疫苗信息`);
+                    } else {
+                        console.warn(`未知动物ID: ${animalID}`);
+                    }
+                } catch (e) {
+                    console.error("解析 MQTT 消息出错", e);
+                }
+            });
+            mqttClient.on('error', (err) => {
+                console.error("MQTT 错误", err);
+                updateMqttStatus('disconnected', 'MQTT 错误');
+            });
+            mqttClient.on('reconnect', () => {
+                updateMqttStatus('connecting', 'MQTT 重连中...');
+            });
+            mqttClient.on('offline', () => {
+                updateMqttStatus('disconnected', 'MQTT 离线');
+            });
+        }
+        document.getElementById('predict-btn').addEventListener('click', function () {
+            window.open('predict.html', '_blank');
+        });
+        document.getElementById('edit-btn').addEventListener('click', () => {
+            if (currentRole !== 'admin') {
+                alert('只有管理员可以编辑动物信息');
+                return;
+            }
+            localStorage.setItem('animalData', JSON.stringify(animals));
+            window.open('edit.html', '_blank');
+        });
+        document.getElementById('login-btn').addEventListener('click', showLoginModal);
+        document.getElementById('logout-btn').addEventListener('click', logout);
+        document.getElementById('close-login-modal').addEventListener('click', hideLoginModal);
+        document.getElementById('login-form').addEventListener('submit', handleLogin);
+        document.getElementById('login-modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('login-modal')) hideLoginModal();
+        });
+        document.getElementById('add-fence-btn')?.addEventListener('click', () => {
+            if (currentRole !== 'admin') {
+                alert('只有管理员可以添加围栏');
+                return;
+            }
+            alert('请在地图上点击任意位置，然后输入围栏名称和半径。');
+        }); document.getElementById('clear-alerts')?.addEventListener('click', () => {
+            if (confirm('清除所有告警记录？')) {
+                alertRecords = [];
+                saveAlertRecords();
+            }
+        });
+        window.onload = () => {
+            initLocalStorage();
+            initMap();
+            initMQTT();
+            renderAll();
+            initCountLine();
+            updateTime();
+            loadLoginState();
+            renderAlertList();
+            renderFenceList();
+            setTimeout(() => {
+                resetAllAnimalsFenceStatus();
+            }, 1000);
+            setInterval(() => {
+                const saved = localStorage.getItem('animalData');
+                if (saved) {
+                    const newAnimals = JSON.parse(saved);
+                    if (JSON.stringify(animals) !== JSON.stringify(newAnimals)) {
+                        animals = newAnimals;
+                        renderAll();
+                        resetAllAnimalsFenceStatus();
+                    }
+                }
+            }, 2000);
+        };
+        function updateTime() {
+            const now = new Date();
+            const fmt = n => n.toString().padStart(2, "0");
+            document.getElementById("current-time").innerText = `${now.getFullYear()}-${fmt(now.getMonth() + 1)}-${fmt(now.getDate())} ${fmt(now.getHours())}:${fmt(now.getMinutes())}:${fmt(now.getSeconds())}`;
+            setTimeout(updateTime, 1000);
+        }
+        function requestNotificationPermission() { if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') Notification.requestPermission(); }
+        requestNotificationPermission();
+    </script>
+</body>
+</html>

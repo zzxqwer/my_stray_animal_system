@@ -1,0 +1,605 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>流浪动物管理中心 | 护城为环 为爱定位</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .hero-overlay {
+            background: linear-gradient(0deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.4) 100%);
+        }
+
+        .nav-link-active {
+            color: #f97316;
+            font-weight: 500;
+            border-bottom: 2px solid #f97316;
+            padding-bottom: 4px;
+        }
+
+        .nav-link {
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary-solid {
+            transition: all 0.2s ease;
+        }
+
+            .btn-primary-solid:hover {
+                background-color: #ea580c;
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            }
+
+        .btn-outline-light:hover {
+            background-color: rgba(255,255,255,0.2);
+            transform: translateY(-1px);
+        }
+
+        .modal-fade {
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* 核心功能卡片样式 */
+        .feature-card {
+            transition: all 0.25s ease;
+            background: white;
+            border-radius: 1.25rem;
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.03);
+        }
+
+            .feature-card:hover {
+                transform: translateY(-6px);
+                box-shadow: 0 20px 30px -12px rgba(0,0,0,0.15);
+                border-color: rgba(249,115,22,0.2);
+            }
+
+        .feature-icon {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2rem;
+            margin: 0 auto 1rem auto;
+            color: #f97316;
+            transition: all 0.2s;
+        }
+
+        .feature-card:hover .feature-icon {
+            background: #f97316;
+            color: white;
+            transform: scale(1.03);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased bg-gray-50">
+
+    <div class="flex flex-col min-h-screen">
+        <!-- 顶部导航栏 -->
+        <header class="bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-30 border-b border-gray-200/60">
+            <div class="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
+                <div class="flex flex-wrap items-center justify-between py-3 md:py-4">
+                    <!-- 左侧 Logo -->
+                    <div class="flex items-center space-x-2.5">
+                        <i class="fas fa-paw text-2xl text-orange-500 drop-shadow-sm"></i>
+                        <span class="text-xl font-bold bg-gradient-to-r from-rose-700 to-amber-700 bg-clip-text text-transparent">流浪动物管理中心</span>
+                    </div>
+
+                    <!-- 桌面导航 -->
+                    <div class="hidden md:flex items-center space-x-8 text-gray-700 font-medium">
+                        <a href="#" class="nav-link nav-link-active text-orange-600" id="nav-home">首页</a>
+                        <a href="#" id="nav-animal-info" class="nav-link text-gray-600 hover:text-orange-500">动物信息</a>
+                        <a href="#" id="nav-location-system" class="nav-link text-gray-600 hover:text-orange-500">定位系统</a>
+                        <a href="#" id="nav-about" class="nav-link text-gray-600 hover:text-orange-500">关于我们</a>
+                    </div>
+
+                    <!-- 右上角用户区域 -->
+                    <div class="flex items-center gap-3" id="userArea">
+                        <!-- 未登录时显示登录按钮 -->
+                        <button id="loginBtn" class="px-4 py-1.5 text-sm font-medium text-orange-600 border border-orange-300 rounded-full hover:bg-orange-50 transition">
+                            <i class="fas fa-sign-in-alt mr-1"></i> 登录
+                        </button>
+                        <!-- 登录后显示的用户信息（初始隐藏） -->
+                        <div id="loggedInUserArea" class="hidden items-center gap-3">
+                            <span class="text-sm text-gray-700"><i class="fas fa-user-circle mr-1"></i><span id="displayUsername">user</span></span>
+                            <button id="logoutHomeBtn" class="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-full hover:bg-gray-100 transition">
+                                <i class="fas fa-sign-out-alt mr-1"></i> 退出
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 移动端菜单按钮 -->
+                    <div class="md:hidden flex items-center">
+                        <button id="mobileMenuBtn" class="text-gray-600 focus:outline-none">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 移动端下拉菜单 -->
+                <div id="mobileMenu" class="md:hidden hidden pb-4 flex flex-col space-y-3 text-gray-700 border-t border-gray-100 pt-3">
+                    <a href="#" class="nav-link-mobile py-1 text-orange-600 font-semibold flex items-center gap-2"><i class="fas fa-home w-5"></i> 首页</a>
+                    <a href="#" class="nav-link-mobile py-1 text-gray-600 flex items-center gap-2"><i class="fas fa-dog w-5"></i> 动物信息</a>
+                    <a href="#" class="nav-link-mobile py-1 text-gray-600 flex items-center gap-2"><i class="fas fa-map-marker-alt w-5"></i> 定位系统</a>
+                    <a href="#" class="nav-link-mobile py-1 text-gray-600 flex items-center gap-2"><i class="fas fa-heart w-5"></i> 关于我们</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主视觉区（暗色图片+文字+按钮） -->
+        <main class="flex-grow">
+            <div class="relative w-full overflow-hidden shadow-inner">
+                <div class="hero-bg relative bg-cover bg-center bg-no-repeat"
+                     style="background-image: linear-gradient(0deg, rgba(0,0,0,0.75), rgba(0,0,0,0.55)), url('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=2069&auto=format&fit=crop'); background-size: cover; background-position: center 30%;">
+                    <div class="relative z-10 flex flex-col items-center justify-center text-center px-6 py-24 md:py-32 lg:py-40">
+                        <h1 class="text-white text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight drop-shadow-lg">
+                            护城为环，为爱定位
+                        </h1>
+                        <p class="text-gray-200 text-base md:text-lg lg:text-xl mt-4 max-w-2xl mx-auto opacity-90">
+                            基于物联网与推荐模型的流浪动物管理系统
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-5 mt-10">
+                            <button id="heroAnimalBtn" class="btn-primary-solid bg-white text-gray-800 hover:bg-gray-100 font-semibold py-3 px-8 rounded-full shadow-lg flex items-center justify-center gap-2 text-base md:text-lg transition-all">
+                                <i class="fas fa-paw text-orange-500"></i> 动物信息
+                            </button>
+                            <button id="heroLocationBtn" class="btn-outline-light bg-transparent border-2 border-white text-white font-semibold py-3 px-8 rounded-full flex items-center justify-center gap-2 text-base md:text-lg hover:bg-white hover:text-gray-800 transition-all shadow-md">
+                                <i class="fas fa-map-marked-alt"></i> 定位系统
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========= 新增：核心功能区域 ========= -->
+            <div class="max-w-6xl mx-auto px-6 py-12 md:py-16">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl md:text-4xl font-bold text-gray-800 inline-block border-b-4 border-orange-400 pb-2 px-4">
+                        核心功能
+                    </h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- 信息查询卡片 -->
+                    <div class="feature-card p-6 text-center cursor-pointer" id="coreInfoQuery">
+                        <div class="feature-icon mx-auto">
+                            <i class="fas fa-database text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mt-4 mb-2">信息查询</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">查看动物档案、健康状况、疫苗记录等全面信息</p>
+                        <div class="mt-4 inline-block text-orange-500 text-sm font-medium group-hover:underline">
+                            立即查阅 <i class="fas fa-arrow-right ml-1 text-xs"></i>
+                        </div>
+                    </div>
+                    <!-- 领养系统卡片 (链接到 adopt.html) -->
+                    <div class="feature-card p-6 text-center cursor-pointer" id="coreAdoptSystem">
+                        <div class="feature-icon mx-auto">
+                            <i class="fas fa-hand-holding-heart text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mt-4 mb-2">领养系统</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">提交领养申请，追踪领养进度，给流浪动物一个温暖的家</p>
+                        <div class="mt-4 inline-block text-orange-500 text-sm font-medium">
+                            前往领养 <i class="fas fa-arrow-right ml-1 text-xs"></i>
+                        </div>
+                    </div>
+                    <!-- 定位系统卡片 (链接到 index.html 地图页面) -->
+                    <div class="feature-card p-6 text-center cursor-pointer" id="coreLocationSystem">
+                        <div class="feature-icon mx-auto">
+                            <i class="fas fa-map-marked-alt text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mt-4 mb-2">定位系统</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">实时查看动物活动轨迹，电子围栏预警，守护毛孩子安全</p>
+                        <div class="mt-4 inline-block text-orange-500 text-sm font-medium">
+                            开启定位 <i class="fas fa-arrow-right ml-1 text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部装饰信息（原版权信息） -->
+            <div class="max-w-6xl mx-auto px-6 py-5 text-center text-gray-400 text-sm border-t border-gray-200/50">
+                <i class="fas fa-shield-alt text-orange-300 mr-1"></i> 守护流浪伙伴 | 科技温暖生命
+            </div>
+        </main>
+    </div>
+
+    <!-- ===== 强制登录模态框 (无关闭按钮，不可背景关闭/ESC关闭，登录成功后自动消失) ===== -->
+    <div id="authModal" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 transition-all duration-300" style="display: none;">
+        <div class="bg-white rounded-2xl w-full max-w-md mx-4 shadow-2xl modal-fade overflow-hidden">
+            <div class="border-b border-gray-100 px-6 py-5 bg-orange-50 text-center">
+                <!-- 没有关闭按钮，确保强制登录 -->
+                <div class="flex justify-center mb-1">
+                    <i class="fas fa-paw text-orange-500 text-3xl"></i>
+                </div>
+                <h3 id="modalTitle" class="text-2xl font-bold text-gray-800">欢迎使用流浪动物管理系统</h3>
+                <p class="text-sm text-orange-600 mt-1 font-medium">✨ 请先登录以使用全部功能 ✨</p>
+            </div>
+            <div class="p-6">
+                <!-- 登录表单 -->
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">用户名</label>
+                        <input type="text" id="loginUsername" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-400 outline-none" placeholder="请输入用户名" autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">密码</label>
+                        <input type="password" id="loginPassword" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-400 outline-none" placeholder="请输入密码">
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl transition shadow-md">登录</button>
+                        <button type="button" id="switchToRegisterBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-xl transition">去注册</button>
+                    </div>
+                </form>
+                <!-- 注册表单（初始隐藏） -->
+                <form id="registerForm" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">用户名</label>
+                        <input type="text" id="regUsername" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-400 outline-none" placeholder="3~20个字符" autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">密码</label>
+                        <input type="password" id="regPassword" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-400 outline-none" placeholder="至少4位">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">确认密码</label>
+                        <input type="password" id="regConfirmPwd" class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-400 outline-none" placeholder="再次输入密码">
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl transition">注册</button>
+                        <button type="button" id="switchToLoginBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-xl transition">返回登录</button>
+                    </div>
+                </form>
+                <p class="text-xs text-center text-gray-400 mt-5">登录后即可体验完整动物信息查询、领养及定位服务</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const USERS_KEY = 'stray_users';
+        const STORAGE_USER_KEY = 'stray_user';
+        const STORAGE_ROLE_KEY = 'stray_role';
+
+        // 初始化用户数据
+        function initUsers() {
+            let users = localStorage.getItem(USERS_KEY);
+            if (!users) {
+                const defaultUsers = [
+                    { username: 'admin', password: 'admin', role: 'admin' }
+                ];
+                localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+                return defaultUsers;
+            }
+            let userList = JSON.parse(users);
+            if (!userList.find(u => u.username === 'admin')) {
+                userList.push({ username: 'admin', password: 'admin', role: 'admin' });
+                localStorage.setItem(USERS_KEY, JSON.stringify(userList));
+            }
+            return userList;
+        }
+
+        function saveUsers(users) {
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+        }
+
+        function register(username, password) {
+            const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+            if (users.find(u => u.username === username)) {
+                alert('用户名已存在，请换一个');
+                return false;
+            }
+            if (username.length < 2) {
+                alert('用户名至少2个字符');
+                return false;
+            }
+            if (password.length < 3) {
+                alert('密码至少3位');
+                return false;
+            }
+            users.push({ username, password, role: 'user' });
+            saveUsers(users);
+            alert('注册成功，请登录');
+            return true;
+        }
+
+        function login(username, password) {
+            const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+            const user = users.find(u => u.username === username && u.password === password);
+            if (user) {
+                sessionStorage.setItem(STORAGE_USER_KEY, user.username);
+                sessionStorage.setItem(STORAGE_ROLE_KEY, user.role);
+                return true;
+            }
+            return false;
+        }
+
+        function checkLoginStatus() {
+            const username = sessionStorage.getItem(STORAGE_USER_KEY);
+            if (username) {
+                document.getElementById('loginBtn').classList.add('hidden');
+                document.getElementById('loggedInUserArea').classList.remove('hidden');
+                document.getElementById('displayUsername').innerText = username;
+                return true;
+            } else {
+                document.getElementById('loginBtn').classList.remove('hidden');
+                document.getElementById('loggedInUserArea').classList.add('hidden');
+                return false;
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem(STORAGE_USER_KEY);
+            sessionStorage.removeItem(STORAGE_ROLE_KEY);
+            checkLoginStatus();
+            showForceLoginModal();
+            alert('您已退出登录，请重新登录后使用系统');
+        }
+
+        // 强制登录模态框控制
+        let isModalForced = false;
+        const modal = document.getElementById('authModal');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const modalTitle = document.getElementById('modalTitle');
+
+        // 显示强制登录模态框，确保无关闭按钮、不可点击背景关闭、不可ESC关闭
+        function showForceLoginModal() {
+            // 重置为登录模式
+            loginForm.classList.remove('hidden');
+            registerForm.classList.add('hidden');
+            modalTitle.innerHTML = '<i class="fas fa-paw text-orange-500 mr-1"></i> 欢迎使用流浪动物管理系统<br><span class="text-sm font-normal">请先登录以访问网站功能</span>';
+            // 清空输入框
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('regUsername').value = '';
+            document.getElementById('regPassword').value = '';
+            document.getElementById('regConfirmPwd').value = '';
+            modal.style.display = 'flex';
+            isModalForced = true;
+        }
+
+        function hideModal() {
+            if (!isModalForced) return; // 安全起见，但强制模式下只能登录成功后关闭
+            modal.style.display = 'none';
+            isModalForced = false;
+        }
+
+        // 处理登录提交（成功则关闭模态框并刷新UI）
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            if (!username || !password) {
+                alert('请填写用户名和密码');
+                return;
+            }
+            if (login(username, password)) {
+                hideModal();          // 登录成功后关闭强制弹窗
+                checkLoginStatus();   // 更新顶部用户区域
+                alert(`欢迎回来，${username}！`);
+                // 可以重新刷新核心功能区域的状态（无需额外操作）
+            } else {
+                alert('用户名或密码错误');
+            }
+        }
+
+        // 处理注册提交（注册成功则切换到登录表单，不清除模态框）
+        function handleRegisterSubmit(e) {
+            e.preventDefault();
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value.trim();
+            const confirm = document.getElementById('regConfirmPwd').value.trim();
+            if (!username || !password || !confirm) {
+                alert('请填写完整信息');
+                return;
+            }
+            if (password !== confirm) {
+                alert('两次输入的密码不一致');
+                return;
+            }
+            if (register(username, password)) {
+                // 注册成功后切换到登录模式，让用户主动登录
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                modalTitle.innerHTML = '<i class="fas fa-paw text-orange-500 mr-1"></i> 欢迎使用流浪动物管理系统<br><span class="text-sm font-normal">请先登录以访问网站功能</span>';
+                alert('注册成功，请使用账号密码登录');
+            }
+        }
+
+        function ensureLoginAndExecute(callback) {
+            const logged = sessionStorage.getItem(STORAGE_USER_KEY);
+            if (!logged) {
+                alert('请先登录后再使用此功能');
+                showForceLoginModal();
+                return false;
+            }
+            if (callback) callback();
+            return true;
+        }
+
+        function handleAnimalInfo() {
+            window.open('breed-search.html', '_blank');
+        }
+
+        function handleAbout() {
+            ensureLoginAndExecute(() => {
+                alert("✨ 关于我们\n\n「流浪动物管理中心」致力于利用物联网定位、AI推荐算法与社区互助，为流浪动物提供实时定位、健康档案及领养支持。\n护城为环，用科技守护每一个无家的小生命。");
+            });
+        }
+
+        function openLocationSystem() {
+            ensureLoginAndExecute(() => {
+                window.open('index.html', '_blank');
+            });
+        }
+
+        // 领养系统跳转 (adopt.html)
+        function openAdoptSystem() {
+            ensureLoginAndExecute(() => {
+                window.location.href = 'adopt.html';
+            });
+        }
+
+        // 信息查询 (与动物信息相同)
+        function openInfoQuery() {
+            handleAnimalInfo();  // 与动物信息行为一致
+        }
+
+        // 设置高亮导航
+        function setActiveNav(activeId) {
+            const navs = ['nav-home', 'nav-animal-info', 'nav-location-system', 'nav-about'];
+            navs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.remove('nav-link-active', 'text-orange-600');
+                    el.classList.add('text-gray-600');
+                }
+            });
+            const activeEl = document.getElementById(`nav-${activeId}`);
+            if (activeEl) {
+                activeEl.classList.add('nav-link-active', 'text-orange-600');
+            }
+        }
+
+        // ---------- 事件绑定与初始化 ----------
+        function bindEvents() {
+            // 登录按钮（顶部）-> 如果未登录显示模态框，但如果模态框已显示，无需重复；如果已登录不会点这个按钮
+            document.getElementById('loginBtn').addEventListener('click', () => {
+                if (!sessionStorage.getItem(STORAGE_USER_KEY)) {
+                    showForceLoginModal();
+                }
+            });
+            document.getElementById('logoutHomeBtn').addEventListener('click', logout);
+            // 模态框内部切换
+            document.getElementById('switchToRegisterBtn').addEventListener('click', () => {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                modalTitle.innerHTML = '<i class="fas fa-user-plus text-orange-500 mr-1"></i> 注册新账号<br><span class="text-sm font-normal">填写信息注册后登录</span>';
+            });
+            document.getElementById('switchToLoginBtn').addEventListener('click', () => {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                modalTitle.innerHTML = '<i class="fas fa-paw text-orange-500 mr-1"></i> 欢迎使用流浪动物管理系统<br><span class="text-sm font-normal">请先登录以访问网站功能</span>';
+            });
+            loginForm.addEventListener('submit', handleLoginSubmit);
+            registerForm.addEventListener('submit', handleRegisterSubmit);
+
+            // 导航栏
+            document.getElementById('nav-home').addEventListener('click', (e) => {
+                e.preventDefault();
+                ensureLoginAndExecute(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    setActiveNav('home');
+                });
+            });
+            document.getElementById('nav-animal-info').addEventListener('click', (e) => {
+                e.preventDefault();
+                handleAnimalInfo();
+                setActiveNav('animal');
+            });
+            document.getElementById('nav-location-system').addEventListener('click', (e) => {
+                e.preventDefault();
+                openLocationSystem();
+                setActiveNav('location');
+            });
+            document.getElementById('nav-about').addEventListener('click', (e) => {
+                e.preventDefault();
+                handleAbout();
+                setActiveNav('about');
+            });
+            document.getElementById('heroAnimalBtn').addEventListener('click', handleAnimalInfo);
+            document.getElementById('heroLocationBtn').addEventListener('click', openLocationSystem);
+
+            // 核心功能三个方格绑定事件
+            const infoCard = document.getElementById('coreInfoQuery');
+            if (infoCard) infoCard.addEventListener('click', openInfoQuery);
+            const adoptCard = document.getElementById('coreAdoptSystem');
+            if (adoptCard) adoptCard.addEventListener('click', openAdoptSystem);
+            const locationCard = document.getElementById('coreLocationSystem');
+            if (locationCard) locationCard.addEventListener('click', openLocationSystem);
+
+            // 移动端菜单处理
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+                const mobileLinks = document.querySelectorAll('.nav-link-mobile');
+                if (mobileLinks.length >= 4) {
+                    mobileLinks[0].addEventListener('click', (e) => {
+                        e.preventDefault();
+                        ensureLoginAndExecute(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setActiveNav('home'); mobileMenu.classList.add('hidden'); });
+                    });
+                    mobileLinks[1].addEventListener('click', (e) => {
+                        e.preventDefault();
+                        handleAnimalInfo();
+                        setActiveNav('animal');
+                        mobileMenu.classList.add('hidden');
+                    });
+                    mobileLinks[2].addEventListener('click', (e) => {
+                        e.preventDefault();
+                        openLocationSystem();
+                        setActiveNav('location');
+                        mobileMenu.classList.add('hidden');
+                    });
+                    mobileLinks[3].addEventListener('click', (e) => {
+                        e.preventDefault();
+                        handleAbout();
+                        setActiveNav('about');
+                        mobileMenu.classList.add('hidden');
+                    });
+                }
+                document.addEventListener('click', function (event) {
+                    if (!mobileMenu.classList.contains('hidden') && !mobileMenu.contains(event.target) && !mobileMenuBtn.contains(event.target)) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                });
+            }
+
+            // 禁用模态框的背景点击关闭 / ESC关闭 (强制登录不可逃避)
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    // 强制模式下，点击背景不做任何关闭
+                    return;
+                }
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.style.display === 'flex') {
+                    // 强制模式下按ESC无效，不关闭
+                    e.preventDefault();
+                    return;
+                }
+            });
+        }
+
+        // 页面启动逻辑：初始化用户，检测登录状态，未登录显示强制模态框，已登录则正常显示
+        function initPage() {
+            initUsers();
+            checkLoginStatus();
+            bindEvents();
+            const isLogged = sessionStorage.getItem(STORAGE_USER_KEY);
+            if (!isLogged) {
+                showForceLoginModal();
+            } else {
+                // 已登录状态下保证模态框关闭
+                if (modal.style.display === 'flex') hideModal();
+            }
+            setActiveNav('home');
+        }
+
+        initPage();
+    </script>
+</body>
+</html>
